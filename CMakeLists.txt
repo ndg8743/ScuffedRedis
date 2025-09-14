@@ -30,6 +30,7 @@ set(COMMON_SOURCES
     src/network/tcp_client.cpp
     src/protocol/protocol.cpp
     src/data/hashtable.cpp
+    src/data/ttl_manager.cpp
     src/event/event_loop.cpp
 )
 
