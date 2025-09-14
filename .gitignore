@@ -1,23 +1,11 @@
-# Build directories
+# Build artifacts
 build/
-cmake-build-*/
-
-# Compiled binaries
+*.o
 *.exe
 *.out
-*.app
-scuffedredis-server
-scuffedredis-client
-
-# Object files
-*.o
-*.obj
-
-# CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
+*.a
+*.so
+*.dll
 
 # IDE files
 .vscode/
@@ -26,13 +14,20 @@ Makefile
 *.swo
 *~
 
-# OS files
-.DS_Store
-Thumbs.db
+# Debug files
+*.dSYM/
+*.pdb
 
-# Logs
+# Log files
 *.log
 
-# Temporary files
-*.tmp
-*.temp
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Testing
+test_output/
+*.test

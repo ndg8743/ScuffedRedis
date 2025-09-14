@@ -1,129 +1,36 @@
+/**
+ * ScuffedRedis CLI Client
+ * 
+ * Command-line interface for interacting with the Redis server.
+ * Supports interactive mode and single command execution.
+ */
+
 #include <iostream>
 #include <string>
-#include <thread>
-#include <chrono>
-#include "../network/tcp_client.hpp"
-#include "../utils/logger.hpp"
-
-namespace scuffedredis {
-namespace client {
-
-// Simple interactive client
-// Basically just a command-line interface to test the server
-class RedisClient {
-public:
-    RedisClient() = default;
-    
-    bool connect(const std::string& host, int port) {
-        return client_.connect(host, port);
-    }
-    
-    void disconnect() {
-        client_.disconnect();
-    }
-    
-    std::string sendCommand(const std::string& command) {
-        if (!client_.isConnected()) {
-            return "Error: Not connected to server";
-        }
-        
-        // Send command
-        ssize_t sent = client_.send(command.c_str(), command.length());
-        if (sent < 0) {
-            return "Error: Failed to send command";
-        }
-        
-        // Receive response
-        char buffer[4096];
-        ssize_t received = client_.recv(buffer, sizeof(buffer) - 1);
-        if (received < 0) {
-            return "Error: Failed to receive response";
-        }
-        
-        buffer[received] = '\0';
-        return std::string(buffer);
-    }
-    
-    bool isConnected() const {
-        return client_.isConnected();
-    }
-
-private:
-    network::TcpClient client_;
-};
-
-} // namespace client
-} // namespace scuffedredis
+#include <cstdlib>
 
 int main(int argc, char* argv[]) {
-    using namespace scuffedredis;
+    // Default connection parameters
+    std::string host = "127.0.0.1";
+    int port = 6380;
     
     // Parse command line arguments
-    std::string host = "localhost";
-    int port = 6379;
-    
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "--host" && i + 1 < argc) {
-            host = argv[++i];
-        } else if (arg == "--port" && i + 1 < argc) {
-            port = std::stoi(argv[++i]);
-        } else if (arg == "--help") {
-            std::cout << "Usage: " << argv[0] << " [--host HOST] [--port PORT] [--help]\n";
-            std::cout << "  --host HOST    Connect to host (default: localhost)\n";
-            std::cout << "  --port PORT    Connect to port (default: 6379)\n";
-            std::cout << "  --help         Show this help message\n";
-            return 0;
-        }
+    if (argc > 1) {
+        host = argv[1];
+    }
+    if (argc > 2) {
+        port = std::atoi(argv[2]);
     }
     
-    // Set up logging
-    utils::Logger::setLevel(utils::Logger::WARN);  // Less verbose for client
+    std::cout << "ScuffedRedis CLI v0.1.0" << std::endl;
+    std::cout << "Connecting to " << host << ":" << port << "..." << std::endl;
     
-    client::RedisClient client;
+    // TODO: Establish TCP connection to server
+    // TODO: Implement command parsing
+    // TODO: Send requests and handle responses
+    // TODO: Interactive REPL loop
     
-    std::cout << "ScuffedRedis Client\n";
-    std::cout << "Connecting to " << host << ":" << port << "...\n";
+    std::cout << "Not connected. Server implementation pending." << std::endl;
     
-    if (!client.connect(host, port)) {
-        std::cerr << "Failed to connect to server\n";
-        return 1;
-    }
-    
-    std::cout << "Connected! Type commands or 'quit' to exit.\n";
-    std::cout << "Example commands:\n";
-    std::cout << "  SET key value\n";
-    std::cout << "  GET key\n";
-    std::cout << "  DEL key\n";
-    std::cout << "  EXISTS key\n";
-    std::cout << "  KEYS\n";
-    std::cout << "  PING\n";
-    std::cout << "  QUIT\n\n";
-    
-    std::string input;
-    while (true) {
-        std::cout << "> ";
-        std::getline(std::cin, input);
-        
-        if (input.empty()) {
-            continue;
-        }
-        
-        if (input == "quit" || input == "exit") {
-            client.sendCommand("QUIT");
-            break;
-        }
-        
-        std::string response = client.sendCommand(input);
-        std::cout << response << "\n";
-        
-        if (!client.isConnected()) {
-            std::cout << "Connection lost.\n";
-            break;
-        }
-    }
-    
-    client.disconnect();
-    std::cout << "Goodbye!\n";
     return 0;
 }

@@ -1,50 +1,116 @@
-# ScuffedRedis
+# ScuffedRedis - Build Your Own Redis
 
-A Redis-like in-memory key-value store implementation in C++, built from scratch following clean code principles.
+A Redis implementation built from scratch in C++ following the [Build Your Own Redis](https://build-your-own.org/redis) tutorial.
 
-## Features
+## 🎯 Project Goals
 
-- **Network Programming**: TCP server/client with concurrent I/O
-- **Data Structures**: Efficient hashtables, balanced binary trees, sorted sets
-- **Event Loop**: High-performance event-driven architecture
-- **Caching**: TTL-based cache expiration with timer management
-- **Thread Pool**: Concurrent request processing
+- Learn network programming with sockets
+- Implement efficient data structures (hashtables, AVL trees)
+- Build an event-driven architecture
+- Understand concurrent I/O models
+- Create a production-like key-value store
 
-## Architecture
+## 📚 Implementation Roadmap
+
+### Part 1: Core Redis (Foundation)
+
+- [x] **Setup**: Project structure and build system
+- [ ] **Socket Programming**: Basic TCP socket creation and binding
+- [ ] **TCP Server & Client**: Connection handling and basic communication
+- [ ] **Protocol Design**: Binary protocol for request/response
+- [ ] **Concurrent I/O**: Non-blocking I/O with multiplexing (epoll/select)
+- [ ] **Event Loop**: Event-driven architecture for handling connections
+- [ ] **Key-Value Server**: Basic GET/SET/DEL operations
+
+### Part 2: Advanced Features
+
+- [ ] **Hashtable**: Efficient hash table with dynamic resizing
+- [ ] **Serialization**: Optimized data encoding/decoding
+- [ ] **AVL Tree**: Balanced binary tree for sorted operations
+- [ ] **Sorted Sets**: ZADD, ZRANGE, ZRANK implementation
+- [ ] **Timers**: Connection timeouts and idle detection
+- [ ] **TTL**: Key expiration with time-to-live
+- [ ] **Thread Pool**: Multi-threaded request processing
+
+## 🏗️ Architecture
 
 ```
-src/
-├── network/          # Socket programming and TCP handling
-├── protocol/         # Request-response protocol implementation
-├── data/            # Data structures (hashtables, trees, sets)
-├── server/          # Main server logic and event loop
-├── client/          # Client implementation
-└── utils/           # Utilities and helpers
+ScuffedRedis/
+├── src/
+│   ├── server/          # Server main and initialization
+│   ├── client/          # CLI client implementation
+│   ├── network/         # Socket and TCP handling
+│   ├── protocol/        # Request/response protocol
+│   ├── data/            # Data structures (hashtable, AVL)
+│   ├── event/           # Event loop and async I/O
+│   └── utils/           # Utilities (logging, timing)
+├── tests/               # Unit and integration tests
+├── docs/                # Documentation and notes
+└── CMakeLists.txt       # Build configuration
 ```
 
-## Building
+## 🚀 Building and Running
+
+### Prerequisites
+- CMake 3.10+
+- C++17 compatible compiler
+- Windows: Visual Studio or MinGW
+- Linux/Mac: GCC or Clang
+
+### Build Instructions
 
 ```bash
+# Create build directory
 mkdir build && cd build
+
+# Configure
 cmake ..
-make
+
+# Build
+cmake --build .
+
+# Run server
+./scuffed-redis-server
+
+# Run client (in another terminal)
+./scuffed-redis-cli
 ```
 
-## Usage
+## 🔧 Design Principles
 
-```bash
-# Start server
-./scuffedredis-server --port 6379
+1. **Clean Code**: Self-documenting code with meaningful names
+2. **Clear Comments**: Explain WHY, not WHAT
+3. **Performance First**: Cache-friendly data structures, efficient algorithms
+4. **Incremental Development**: Each commit is a working feature
+5. **Testability**: Modular design for easy testing
 
-# Connect with client
-./scuffedredis-client --host localhost --port 6379
-```
+## 📊 Performance Goals
 
-## Design Principles
+- Handle 100K+ requests/second
+- Sub-millisecond latency for basic operations
+- Efficient memory usage with dynamic sizing
+- Graceful degradation under load
 
-- **Clean Code**: Readable, maintainable code with clear comments
-- **Performance**: Optimized for speed and efficiency
-- **Caching**: Intelligent caching strategies throughout
-- **Modularity**: Well-separated concerns and components
+## 🧪 Testing Strategy
 
-Based on the excellent tutorial at [build-your-own.org/redis](https://build-your-own.org/redis/)
+- Unit tests for each component
+- Integration tests for protocol compliance
+- Stress tests for performance validation
+- Memory leak detection with sanitizers
+
+## 📝 Development Notes
+
+Each major component will be developed incrementally with:
+- Clear interfaces and separation of concerns
+- Comprehensive error handling
+- Performance measurements
+- Documentation of design decisions
+
+## 🔍 Current Status
+
+**Phase**: Project Setup ✅
+**Next**: Socket Programming Implementation
+
+---
+
+*This is a learning project implementing Redis core concepts from scratch.*
