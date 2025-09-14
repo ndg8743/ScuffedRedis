@@ -34,6 +34,7 @@ set(COMMON_SOURCES
 
 set(SERVER_SOURCES
     src/server/main.cpp
+    src/server/kv_store.cpp
     ${COMMON_SOURCES}
 )
 
