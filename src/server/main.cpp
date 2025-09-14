@@ -2,15 +2,16 @@
  * ScuffedRedis Server
  * 
  * Entry point for the Redis server implementation.
- * Will evolve from basic socket server to full event-driven architecture.
+ * Now includes full Redis command support with KV store.
  */
 
 #include "network/tcp_server.hpp"
+#include "server/command_handler.hpp"
+#include "utils/logger.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <signal.h>
 #include <atomic>
-#include <algorithm>
 
 using namespace scuffedredis;
 
@@ -29,35 +30,6 @@ void signal_handler(int sig) {
     }
 }
 
-/**
- * Simple echo handler for testing.
- * Echoes back whatever the client sends.
- * Will be replaced with proper Redis protocol handler.
- */
-bool echo_handler(ClientConnection& client) {
-    const auto& buffer = client.get_read_buffer();
-    
-    if (buffer.empty()) {
-        return true;  // Keep connection open
-    }
-    
-    // For now, just echo back the data
-    // Look for newline to determine complete message
-    auto it = std::find(buffer.begin(), buffer.end(), '\n');
-    if (it != buffer.end()) {
-        size_t msg_len = std::distance(buffer.begin(), it) + 1;
-        
-        // Echo the message back
-        std::string response = "ECHO: ";
-        client.write(response);
-        client.write(buffer.data(), msg_len);
-        
-        // Consume the processed bytes
-        client.consume_bytes(msg_len);
-    }
-    
-    return true;  // Keep connection open
-}
 
 int main(int argc, char* argv[]) {
     // Default configuration
@@ -72,7 +44,12 @@ int main(int argc, char* argv[]) {
         bind_address = argv[2];
     }
     
-    std::cout << "ScuffedRedis Server v0.1.0" << std::endl;
+    // Configure logging
+    Logger::instance().set_level(LogLevel::INFO);
+    
+    std::cout << "ScuffedRedis Server v0.2.0" << std::endl;
+    std::cout << "========================================" << std::endl;
+    std::cout << "Full Redis command support enabled" << std::endl;
     std::cout << "========================================" << std::endl;
     
     // Set up signal handlers for graceful shutdown
@@ -84,17 +61,18 @@ int main(int argc, char* argv[]) {
     g_server = &server;
     
     if (!server.init(bind_address, port)) {
-        std::cerr << "Failed to initialize server" << std::endl;
+        LOG_FATAL("Failed to initialize server");
         return 1;
     }
     
     std::cout << "Server listening on " << bind_address << ":" << port << std::endl;
+    std::cout << "Supported commands: GET, SET, DEL, EXISTS, KEYS, PING, ECHO, INFO" << std::endl;
     std::cout << "Press Ctrl+C to stop the server" << std::endl;
     std::cout << "========================================" << std::endl;
     
-    // Run server with echo handler
+    // Run server with Redis command handler
     g_running = true;
-    server.run_blocking(echo_handler);
+    server.run_blocking(make_command_handler());
     
     std::cout << "Server stopped successfully" << std::endl;
     

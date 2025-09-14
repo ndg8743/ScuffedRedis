@@ -41,6 +41,7 @@ set(SERVER_SOURCES
 
 set(CLIENT_SOURCES
     src/client/main.cpp
+    src/client/redis_client.cpp
     ${COMMON_SOURCES}
 )
 
