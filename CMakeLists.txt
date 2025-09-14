@@ -28,6 +28,7 @@ set(COMMON_SOURCES
     src/network/socket.cpp
     src/network/tcp_server.cpp
     src/network/tcp_client.cpp
+    src/protocol/protocol.cpp
 )
 
 set(SERVER_SOURCES
