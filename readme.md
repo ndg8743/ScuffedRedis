@@ -10,7 +10,7 @@ A Redis implementation built from scratch in C++ following the [Build Your Own R
 - Understand concurrent I/O models
 - Create a production-like key-value store
 
-## 📚 Implementation Roadmap
+## Implementation Roadmap
 
 ### Part 1: Core Redis (Foundation)
 
@@ -75,41 +75,6 @@ cmake --build .
 # Run client (in another terminal)
 ./scuffed-redis-cli
 ```
-
-## 🔧 Design Principles
-
-1. **Clean Code**: Self-documenting code with meaningful names
-2. **Clear Comments**: Explain WHY, not WHAT
-3. **Performance First**: Cache-friendly data structures, efficient algorithms
-4. **Incremental Development**: Each commit is a working feature
-5. **Testability**: Modular design for easy testing
-
-## 📊 Performance Goals
-
-- Handle 100K+ requests/second
-- Sub-millisecond latency for basic operations
-- Efficient memory usage with dynamic sizing
-- Graceful degradation under load
-
-## 🧪 Testing Strategy
-
-- Unit tests for each component
-- Integration tests for protocol compliance
-- Stress tests for performance validation
-- Memory leak detection with sanitizers
-
-## 📝 Development Notes
-
-Each major component will be developed incrementally with:
-- Clear interfaces and separation of concerns
-- Comprehensive error handling
-- Performance measurements
-- Documentation of design decisions
-
-## 🔍 Current Status
-
-**Phase**: Project Setup ✅
-**Next**: Socket Programming Implementation
 
 ---
 

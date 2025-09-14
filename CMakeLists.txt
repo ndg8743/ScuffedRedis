@@ -24,12 +24,20 @@ endif()
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 # Source files - will be updated as we add components
+set(COMMON_SOURCES
+    src/network/socket.cpp
+    src/network/tcp_server.cpp
+    src/network/tcp_client.cpp
+)
+
 set(SERVER_SOURCES
     src/server/main.cpp
+    ${COMMON_SOURCES}
 )
 
 set(CLIENT_SOURCES
     src/client/main.cpp
+    ${COMMON_SOURCES}
 )
 
 # Build server executable
