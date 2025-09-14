@@ -26,10 +26,12 @@ A Redis implementation built from scratch in C++ following the [Build Your Own R
 
 - [x] **Hashtable**: Efficient hash table with dynamic resizing
 - [x] **Serialization**: Optimized data encoding/decoding (via Protocol)
+- [x] **Event Loop**: Select-based multiplexing for concurrent I/O
+- [x] **TTL**: Key expiration with time-to-live (heap-based)
+- [x] **Testing**: Basic test suite for core components
 - [ ] **AVL Tree**: Balanced binary tree for sorted operations
 - [ ] **Sorted Sets**: ZADD, ZRANGE, ZRANK implementation
 - [ ] **Timers**: Connection timeouts and idle detection
-- [ ] **TTL**: Key expiration with time-to-live
 - [ ] **Thread Pool**: Multi-threaded request processing
 
 ## 🏗️ Architecture
@@ -120,6 +122,32 @@ cmake --build .
 # Run client (in another terminal)
 ./scuffed-redis-cli
 ```
+
+## 🔍 Current Status
+
+**Phase**: Core Redis Implementation ✅
+**Features**: Full Redis command support, Protocol, Event Loop, TTL
+**Next**: Advanced data structures (AVL trees, Sorted Sets)
+
+### ✅ Completed Features
+- **Network Layer**: Cross-platform sockets, TCP server/client
+- **Protocol**: Binary protocol with serialization/parsing
+- **Data Storage**: Hash table with dynamic resizing
+- **Commands**: GET, SET, DEL, EXISTS, KEYS, PING, ECHO, INFO, FLUSHDB, DBSIZE
+- **Event Loop**: Select-based multiplexing for concurrent connections
+- **TTL Support**: Key expiration with heap-based timer management
+- **Testing**: Basic test suite for core components
+- **Build System**: CMake with cross-platform support
+
+### 🚧 In Progress
+- **Concurrent I/O**: Non-blocking I/O with multiplexing
+- **Event Loop Integration**: Full event-driven server architecture
+
+### 📋 TODO
+- **AVL Tree**: Balanced binary tree for sorted operations
+- **Sorted Sets**: ZADD, ZRANGE, ZRANK implementation
+- **Connection Timeouts**: Idle detection and cleanup
+- **Thread Pool**: Multi-threaded request processing
 
 ---
 
