@@ -9,6 +9,7 @@
  */
 
 #include "data/hashtable.hpp"
+#include "data/sorted_set.hpp"
 #include "protocol/protocol.hpp"
 #include <memory>
 #include <string>
@@ -40,6 +41,12 @@ using CommandHandler = std::function<protocol::MessagePtr(
  * - FLUSHDB
  * - DBSIZE
  * - INFO
+ * - ZADD key score member [score member ...]
+ * - ZRANGE key start stop [WITHSCORES]
+ * - ZRANK key member
+ * - ZREM key member [member ...]
+ * - ZSCORE key member
+ * - ZCARD key
  */
 class KVStore {
 public:
@@ -79,6 +86,7 @@ public:
 
 private:
     ConcurrentHashTable store_;                              // Main data store
+    SortedSetManager sorted_sets_;                          // Sorted sets store
     std::unordered_map<std::string, CommandHandler> handlers_;  // Command handlers
     
     // Statistics counters
@@ -103,6 +111,14 @@ private:
     protocol::MessagePtr handle_flushdb(const std::vector<std::string>& args);
     protocol::MessagePtr handle_dbsize(const std::vector<std::string>& args);
     protocol::MessagePtr handle_info(const std::vector<std::string>& args);
+    
+    // Sorted set command handlers
+    protocol::MessagePtr handle_zadd(const std::vector<std::string>& args);
+    protocol::MessagePtr handle_zrange(const std::vector<std::string>& args);
+    protocol::MessagePtr handle_zrank(const std::vector<std::string>& args);
+    protocol::MessagePtr handle_zrem(const std::vector<std::string>& args);
+    protocol::MessagePtr handle_zscore(const std::vector<std::string>& args);
+    protocol::MessagePtr handle_zcard(const std::vector<std::string>& args);
     
     /**
      * Convert command name to uppercase.
