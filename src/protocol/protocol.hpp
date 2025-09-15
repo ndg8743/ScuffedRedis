@@ -31,7 +31,7 @@ namespace protocol {
 // Protocol constants
 enum class MessageType : uint8_t {
     SIMPLE_STRING = 0x01,  // Simple string response
-    ERROR = 0x02,          // Error message
+    ERROR_MSG = 0x02,      // Error message
     INTEGER = 0x03,        // Integer value
     BULK_STRING = 0x04,    // Binary-safe string
     ARRAY = 0x05,          // Array of messages
@@ -76,7 +76,7 @@ public:
         return type_ == MessageType::SIMPLE_STRING || 
                type_ == MessageType::BULK_STRING;
     }
-    bool is_error() const { return type_ == MessageType::ERROR; }
+    bool is_error() const { return type_ == MessageType::ERROR_MSG; }
     bool is_integer() const { return type_ == MessageType::INTEGER; }
     bool is_array() const { return type_ == MessageType::ARRAY; }
     bool is_null() const { return type_ == MessageType::NULL_VALUE; }

@@ -17,6 +17,7 @@
     // Need to link with Ws2_32.lib
     #pragma comment(lib, "ws2_32.lib")
     using socket_t = SOCKET;
+    using ssize_t = int;
     const socket_t INVALID_SOCKET_FD = INVALID_SOCKET;
 #else
     #include <sys/socket.h>

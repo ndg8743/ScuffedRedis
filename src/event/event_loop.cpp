@@ -239,7 +239,7 @@ void EventLoop::setup_fd_sets(fd_set& read_fds, fd_set& write_fds,
         if (events & static_cast<int>(EventType::WRITE)) {
             FD_SET(fd, &write_fds);
         }
-        if (events & static_cast<int>(EventType::ERROR)) {
+        if (events & static_cast<int>(EventType::ERROR_EVENT)) {
             FD_SET(fd, &error_fds);
         }
         
@@ -268,7 +268,7 @@ void EventLoop::process_select_events(const fd_set& read_fds,
         
         // Check for error events
         if (FD_ISSET(fd, &error_fds)) {
-            callback(fd, EventType::ERROR);
+            callback(fd, EventType::ERROR_EVENT);
         }
     }
 }

@@ -24,7 +24,7 @@ namespace scuffedredis {
  * Command handler function type.
  * Takes command arguments and returns response message.
  */
-using CommandHandler = std::function<protocol::MessagePtr(
+using CommandHandlerFunc = std::function<protocol::MessagePtr(
     const std::vector<std::string>&)>;
 
 /**
@@ -87,7 +87,7 @@ public:
 private:
     ConcurrentHashTable store_;                              // Main data store
     SortedSetManager sorted_sets_;                          // Sorted sets store
-    std::unordered_map<std::string, CommandHandler> handlers_;  // Command handlers
+    std::unordered_map<std::string, CommandHandlerFunc> handlers_;  // Command handlers
     
     // Statistics counters
     mutable std::atomic<size_t> commands_processed_{0};

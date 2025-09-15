@@ -21,7 +21,7 @@ enum class LogLevel {
     DEBUG = 0,
     INFO = 1,
     WARN = 2,
-    ERROR = 3,
+    ERROR_LEVEL = 3,
     FATAL = 4
 };
 
@@ -50,7 +50,7 @@ public:
     void debug(const std::string& msg) { log(LogLevel::DEBUG, msg); }
     void info(const std::string& msg) { log(LogLevel::INFO, msg); }
     void warn(const std::string& msg) { log(LogLevel::WARN, msg); }
-    void error(const std::string& msg) { log(LogLevel::ERROR, msg); }
+    void error(const std::string& msg) { log(LogLevel::ERROR_LEVEL, msg); }
     void fatal(const std::string& msg) { log(LogLevel::FATAL, msg); }
     
     // Generic log method
@@ -85,7 +85,7 @@ private:
             case LogLevel::DEBUG: return "DEBUG";
             case LogLevel::INFO: return "INFO";
             case LogLevel::WARN: return "WARN";
-            case LogLevel::ERROR: return "ERROR";
+            case LogLevel::ERROR_LEVEL: return "ERROR";
             case LogLevel::FATAL: return "FATAL";
             default: return "UNKNOWN";
         }

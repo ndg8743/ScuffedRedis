@@ -16,7 +16,7 @@ MessagePtr Message::make_simple_string(const std::string& str) {
 }
 
 MessagePtr Message::make_error(const std::string& error) {
-    auto msg = std::make_shared<Message>(MessageType::ERROR);
+    auto msg = std::make_shared<Message>(MessageType::ERROR_MSG);
     msg->value_ = error;
     return msg;
 }
@@ -72,7 +72,7 @@ std::vector<uint8_t> Message::serialize() const {
     
     switch (type_) {
         case MessageType::SIMPLE_STRING:
-        case MessageType::ERROR:
+        case MessageType::ERROR_MSG:
         case MessageType::BULK_STRING: {
             const std::string& str = as_string();
             uint32_t len = static_cast<uint32_t>(str.size());
@@ -151,7 +151,7 @@ size_t Message::serialized_size() const {
     
     switch (type_) {
         case MessageType::SIMPLE_STRING:
-        case MessageType::ERROR:
+        case MessageType::ERROR_MSG:
         case MessageType::BULK_STRING:
             size += as_string().size();
             break;
@@ -231,7 +231,7 @@ MessagePtr Parser::parse_message() {
         case MessageType::SIMPLE_STRING:
             return parse_simple_string(length);
             
-        case MessageType::ERROR:
+        case MessageType::ERROR_MSG:
             return parse_error(length);
             
         case MessageType::INTEGER:

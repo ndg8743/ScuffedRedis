@@ -9,6 +9,7 @@
  */
 
 #include "network/socket.hpp"
+#include "network/tcp_server.hpp"
 #include <vector>
 #include <unordered_map>
 #include <functional>
@@ -19,16 +20,13 @@
 
 namespace scuffedredis {
 
-// Forward declarations
-class ClientConnection;
-
 /**
  * Event types for the event loop.
  */
 enum class EventType {
     READ = 1,    // Socket is ready for reading
     WRITE = 2,   // Socket is ready for writing
-    ERROR = 4    // Socket has an error
+    ERROR_EVENT = 4    // Socket has an error
 };
 
 /**
