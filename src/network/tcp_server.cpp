@@ -263,3 +263,5 @@ void TcpServer::cleanup_connections() {
         connections_.end()
     );
 }
+
+} // namespace scuffedredis

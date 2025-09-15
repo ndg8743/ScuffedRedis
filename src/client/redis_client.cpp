@@ -7,7 +7,7 @@ namespace scuffedredis {
 
 RedisClient::RedisClient() {
     // Configure logging for client
-    Logger::instance().set_level(LogLevel::ERROR);  // Only show errors
+    Logger::instance().set_level(LogLevel::ERROR_LEVEL);  // Only show errors
 }
 
 RedisClient::~RedisClient() {
@@ -144,7 +144,7 @@ std::string RedisClient::format_response(const protocol::MessagePtr& response) {
             oss << response->as_string();
             break;
             
-        case protocol::MessageType::ERROR:
+        case protocol::MessageType::ERROR_MSG:
             oss << "(error) " << response->as_string();
             break;
             

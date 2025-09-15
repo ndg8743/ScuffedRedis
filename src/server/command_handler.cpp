@@ -117,8 +117,9 @@ std::function<bool(ClientConnection&)> make_command_handler() {
     // Each connection will use the same handler instance
     static auto handler = std::make_shared<CommandHandler>();
     
-    return [handler](ClientConnection& client) -> bool {
-        return handler->handle_client(client);
+    return [](ClientConnection& client) -> bool {
+        static auto& h = handler;
+        return h->handle_client(client);
     };
 }
 

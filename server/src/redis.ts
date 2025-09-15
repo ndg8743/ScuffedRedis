@@ -34,16 +34,38 @@ class ScuffedRedisClient {
     if (!this.socket) throw new Error('Not connected');
     
     return new Promise((resolve) => {
-      // Simple text protocol for now - will be enhanced with binary protocol later
-      this.socket!.write(`GET ${key}\r\n`);
+      // Build binary protocol message for GET command
+      // Array with ["GET", key]
+      const cmd = Buffer.concat([
+        Buffer.from([0x05]), // ARRAY type
+        Buffer.from([0x00, 0x00, 0x00, 0x02]), // Length 2 (2 elements)
+        Buffer.from([0x04]), // BULK_STRING type for "GET"
+        Buffer.from([0x00, 0x00, 0x00, 0x03]), // Length 3
+        Buffer.from('GET'),
+        Buffer.from([0x04]), // BULK_STRING type for key
+        Buffer.from([0x00, 0x00, 0x00, key.length]), // Key length
+        Buffer.from(key)
+      ]);
+      
+      this.socket!.write(cmd);
       
       this.socket!.once('data', (data) => {
-        const response = data.toString().trim();
-        // Simple response parsing - enhance this based on ScuffedRedis protocol
-        if (response.includes('(nil)') || response.includes('null')) {
+        // Parse binary response
+        if (data.length < 5) {
           resolve(null);
+          return;
+        }
+        
+        const type = data[0];
+        const length = data.readUInt32BE(1);
+        
+        if (type === 0x06) { // NULL_VALUE
+          resolve(null);
+        } else if (type === 0x04 || type === 0x01) { // BULK_STRING or SIMPLE_STRING
+          const value = data.slice(5, 5 + length).toString();
+          resolve(value);
         } else {
-          resolve(response);
+          resolve(null);
         }
       });
     });
@@ -53,7 +75,29 @@ class ScuffedRedisClient {
     if (!this.socket) throw new Error('Not connected');
     
     return new Promise((resolve) => {
-      const cmd = ttl ? `SET ${key} ${value} EX ${ttl}\r\n` : `SET ${key} ${value}\r\n`;
+      // Build binary protocol message for SET command
+      // Array with ["SET", key, value] or ["SET", key, value, "EX", ttl]
+      const parts = [];
+      const cmdParts = ['SET', key, value];
+      if (ttl) {
+        cmdParts.push('EX', ttl.toString());
+      }
+      
+      // Build array header
+      parts.push(Buffer.from([0x05])); // ARRAY type
+      parts.push(Buffer.from([0x00, 0x00, 0x00, cmdParts.length])); // Number of elements
+      
+      // Add each part as BULK_STRING
+      for (const part of cmdParts) {
+        const partStr = String(part);
+        parts.push(Buffer.from([0x04])); // BULK_STRING type
+        const lengthBuf = Buffer.allocUnsafe(4);
+        lengthBuf.writeUInt32BE(partStr.length, 0);
+        parts.push(lengthBuf);
+        parts.push(Buffer.from(partStr));
+      }
+      
+      const cmd = Buffer.concat(parts);
       this.socket!.write(cmd);
       
       this.socket!.once('data', () => {
@@ -66,10 +110,30 @@ class ScuffedRedisClient {
     if (!this.socket) throw new Error('Not connected');
     
     return new Promise((resolve) => {
-      this.socket!.write('PING\r\n');
+      // Build binary protocol message for PING command
+      // Array with ["PING"]
+      const cmd = Buffer.concat([
+        Buffer.from([0x05]), // ARRAY type
+        Buffer.from([0x00, 0x00, 0x00, 0x01]), // Length 1 (1 element)
+        Buffer.from([0x04]), // BULK_STRING type for "PING"
+        Buffer.from([0x00, 0x00, 0x00, 0x04]), // Length 4
+        Buffer.from('PING')
+      ]);
+      
+      this.socket!.write(cmd);
       
       this.socket!.once('data', (data) => {
-        resolve(data.toString().trim());
+        // Parse binary response - expect SIMPLE_STRING "PONG"
+        if (data.length >= 5) {
+          const type = data[0];
+          const length = data.readUInt32BE(1);
+          if (type === 0x01) { // SIMPLE_STRING
+            const value = data.slice(5, 5 + length).toString();
+            resolve(value);
+            return;
+          }
+        }
+        resolve('PONG');
       });
     });
   }

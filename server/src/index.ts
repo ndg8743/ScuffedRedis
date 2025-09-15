@@ -8,7 +8,7 @@ import { setupCache } from './cache';
 import { startTrafficGenerator } from './traffic';
 
 // Load environment variables
-config({ path: '../env' });
+config({ path: './env' });
 
 const app = express();
 const server = createServer(app);

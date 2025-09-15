@@ -1,6 +1,6 @@
-# Redis Cache Heatmap
+# ScuffedRedis + Redis Cache Heatmap
 
-A beautiful 3D visualization of Redis cache hits vs misses using Next.js, React Three Fiber, and Socket.IO.
+A complete Redis implementation in C++ with a stunning 3D real-time cache visualization system.
 
 ## 🎯 Overview
 

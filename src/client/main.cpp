@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
     }
     
     // Configure logging (only show errors for client)
-    Logger::instance().set_level(LogLevel::ERROR);
+    Logger::instance().set_level(LogLevel::ERROR_LEVEL);
     
     std::cout << "ScuffedRedis CLI v0.2.0" << std::endl;
     std::cout << "========================================" << std::endl;

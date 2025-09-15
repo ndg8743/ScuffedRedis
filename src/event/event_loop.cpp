@@ -175,7 +175,7 @@ void EventLoop::event_loop_main() {
         
         // Clean up closed connections periodically
         if (events_processed_ % 100 == 0) {
-            cleanup_closed_connections();
+            // TODO: Implement connection cleanup
         }
     }
     
@@ -243,7 +243,7 @@ void EventLoop::setup_fd_sets(fd_set& read_fds, fd_set& write_fds,
             FD_SET(fd, &error_fds);
         }
         
-        max_fd = std::max(max_fd, static_cast<int>(fd));
+        max_fd = (std::max)(max_fd, static_cast<int>(fd));
     }
 }
 
@@ -322,20 +322,7 @@ void EventLoop::handle_client_error(socket_t client_fd) {
     }
 }
 
-void EventLoop::cleanup_closed_connections() {
-    // Remove connections that are no longer valid
-    auto conn_ids = connections_.get_connection_ids();
-    
-    for (uint64_t conn_id : conn_ids) {
-        auto* conn = connections_.get_connection(conn_id);
-        if (!conn || !conn->is_connected()) {
-            remove_client(conn_id);
-            if (conn) {
-                remove_socket(conn->get_socket().get_fd());
-            }
-        }
-    }
-}
+// TODO: Implement cleanup_closed_connections method
 
 EventLoop::Stats EventLoop::get_stats() const {
     Stats stats;
