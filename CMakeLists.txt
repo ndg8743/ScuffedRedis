@@ -42,6 +42,11 @@ set(SERVER_SOURCES
     ${COMMON_SOURCES}
 )
 
+set(SIMPLE_SERVER_SOURCES
+    src/server/simple_main.cpp
+    src/network/socket.cpp
+)
+
 set(CLIENT_SOURCES
     src/client/main.cpp
     src/client/redis_client.cpp
@@ -51,12 +56,16 @@ set(CLIENT_SOURCES
 # Build server executable
 add_executable(scuffed-redis-server ${SERVER_SOURCES})
 
+# Build simple server executable
+add_executable(scuffed-redis-simple ${SIMPLE_SERVER_SOURCES})
+
 # Build client executable  
 add_executable(scuffed-redis-cli ${CLIENT_SOURCES})
 
 # Platform-specific network libraries
 if(WIN32)
     target_link_libraries(scuffed-redis-server ws2_32)
+    target_link_libraries(scuffed-redis-simple ws2_32)
     target_link_libraries(scuffed-redis-cli ws2_32)
 endif()
 
