@@ -31,3 +31,4 @@ compile_commands.json
 # Testing
 test_output/
 *.test
+node_modules
