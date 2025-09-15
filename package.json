@@ -1,0 +1,24 @@
+{
+  "name": "redis-cache-heatmap",
+  "version": "1.0.0",
+  "description": "Redis Cache Heatmap - 3D visualization of cache hits vs misses",
+  "private": true,
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix web\"",
+    "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
+    "build": "npm run build --prefix server && npm run build --prefix web",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix web",
+    "dev:server": "npm run dev --prefix server",
+    "dev:web": "npm run dev --prefix web"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
