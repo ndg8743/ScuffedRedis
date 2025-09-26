@@ -7,6 +7,10 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
+  output: 'standalone',
+  experimental: {
+    outputFileTracingRoot: process.cwd(),
+  },
 }
 
 module.exports = nextConfig

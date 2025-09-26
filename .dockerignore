@@ -1,53 +1,55 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Development files
+.env*
+!env.production
+test-integration.js
+
+# Node modules
+node_modules
+*/node_modules
+npm-debug.log*
+
 # Build artifacts
 build/
-*.o
-*.exe
-*.out
-*.a
-*.so
-*.dll
+dist/
+.next/
+out/
 
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Git
-.git/
-.gitignore
-
-# Documentation
-*.md
-docs/
-
-# Docker files (don't need to copy these into context)
-Dockerfile
-docker-compose.yml
-.dockerignore
-
-# Test outputs
-test_output/
-*.test
-
-# Logs
-*.log
-
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# Development files
-compile_commands.json
-.clang-format
-.clang-tidy
+# Logs
+logs
+*.log
 
-# CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile.docker
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# Other project files
-redis-cache-heatmap/
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
