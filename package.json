@@ -8,12 +8,14 @@
     "web"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix web\"",
-    "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
-    "build": "npm run build --prefix server && npm run build --prefix web",
-    "install:all": "npm install && npm install --prefix server && npm install --prefix web",
+    "dev": "concurrently \"npm run dev:cpp\" \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:cpp": "cd . && mkdir -p build && cd build && cmake .. && make && ./scuffed-redis-server",
     "dev:server": "npm run dev --prefix server",
-    "dev:web": "npm run dev --prefix web"
+    "dev:web": "npm run dev --prefix web",
+    "build:cpp": "mkdir -p build && cd build && cmake .. && make",
+    "build": "npm run build:cpp && npm run build --prefix server && npm run build --prefix web",
+    "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix web"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

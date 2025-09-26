@@ -1,17 +1,15 @@
-# ScuffedRedis + Redis Cache Heatmap
+# Redis Cache Heatmap
 
-A complete Redis implementation in C++ with a stunning 3D real-time cache visualization system.
+A Redis implementation in C++ with a 3D real-time cache visualization system. Built following the [Build Your Own Redis](https://build-your-own.org/redis/) tutorial by James Smith.
 
-## 🎯 Overview
+## Overview
 
-This project demonstrates cache warm-up patterns through a stunning 3D voxel wall where:
+This project demonstrates cache warm-up patterns through a 3D voxel wall where:
 - **Red cubes** = Cache misses (slow database queries)
 - **Green cubes** = Cache hits (fast Redis lookups)
 - **Gray cubes** = Idle state
 
-Watch as the wall trends greener over time as the cache warms up!
-
-## 🧱 Tech Stack
+## Architecture
 
 ### Frontend
 - **Next.js 14** (App Router)

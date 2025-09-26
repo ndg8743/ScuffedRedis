@@ -50,7 +50,6 @@ app.get('/hitratio', (req, res) => {
   res.json(stats);
 });
 
-// Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
   
@@ -59,24 +58,20 @@ io.on('connection', (socket) => {
   });
 });
 
-// Global stats for hit ratio
 global.cacheStats = { hits: 0, misses: 0, ratio: 0 };
 
-// Initialize Redis and start server
 async function startServer() {
   try {
     await setupRedis();
     const { getItem } = await setupCache();
     
-    // Start traffic generator
     startTrafficGenerator(getItem, io);
     
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Redis Cache Heatmap backend ready`);
-      console.log(`🔗 Connected to: ${getRedisType()}`);
-      console.log(`🌐 Frontend: http://localhost:3000`);
-      console.log(`📡 Backend API: http://localhost:${PORT}`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Connected to: ${getRedisType()}`);
+      console.log(`Frontend: http://localhost:3000`);
+      console.log(`Backend API: http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

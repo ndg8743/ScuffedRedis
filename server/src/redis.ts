@@ -4,9 +4,9 @@ import net from 'net';
 let redis: Redis | null = null;
 let useScuffedRedis = false;
 
-// Simple client for ScuffedRedis C++ server
 class ScuffedRedisClient {
   private socket: net.Socket | null = null;
+  private pendingResponse: Buffer = Buffer.alloc(0);
   private host: string;
   private port: number;
 
@@ -20,122 +20,77 @@ class ScuffedRedisClient {
       this.socket = new net.Socket();
       
       this.socket.connect(this.port, this.host, () => {
-        console.log('✅ Connected to ScuffedRedis C++ server');
         resolve();
       });
       
-      this.socket.on('error', (err) => {
-        reject(err);
+      this.socket.on('error', reject);
+    });
+  }
+
+  private buildCommand(args: string[]): Buffer {
+    const buffers: Buffer[] = [];
+    
+    // Array header
+    buffers.push(Buffer.from([0x05])); // ARRAY type
+    const len = Buffer.allocUnsafe(4);
+    len.writeUInt32LE(args.length, 0); // Little-endian
+    buffers.push(len);
+    
+    // Each argument as BULK_STRING
+    for (const arg of args) {
+      buffers.push(Buffer.from([0x04])); // BULK_STRING type
+      const argLen = Buffer.allocUnsafe(4);
+      argLen.writeUInt32LE(arg.length, 0); // Little-endian
+      buffers.push(argLen);
+      buffers.push(Buffer.from(arg));
+    }
+    
+    return Buffer.concat(buffers);
+  }
+
+  private parseResponse(data: Buffer): any {
+    if (data.length < 5) return null;
+    
+    const type = data[0];
+    const length = data.readUInt32LE(1); // Little-endian
+    
+    if (type === 0x06) return null; // NULL
+    if (type === 0x04 || type === 0x01) { // BULK_STRING or SIMPLE_STRING
+      return data.slice(5, 5 + length).toString();
+    }
+    
+    return null;
+  }
+
+  private async sendCommand(args: string[]): Promise<any> {
+    if (!this.socket) throw new Error('Not connected');
+    
+    return new Promise((resolve) => {
+      const cmd = this.buildCommand(args);
+      this.socket!.write(cmd);
+      
+      this.socket!.once('data', (data) => {
+        const result = this.parseResponse(data);
+        resolve(result);
       });
     });
   }
 
   async get(key: string): Promise<string | null> {
-    if (!this.socket) throw new Error('Not connected');
-    
-    return new Promise((resolve) => {
-      // Build binary protocol message for GET command
-      // Array with ["GET", key]
-      const cmd = Buffer.concat([
-        Buffer.from([0x05]), // ARRAY type
-        Buffer.from([0x00, 0x00, 0x00, 0x02]), // Length 2 (2 elements)
-        Buffer.from([0x04]), // BULK_STRING type for "GET"
-        Buffer.from([0x00, 0x00, 0x00, 0x03]), // Length 3
-        Buffer.from('GET'),
-        Buffer.from([0x04]), // BULK_STRING type for key
-        Buffer.from([0x00, 0x00, 0x00, key.length]), // Key length
-        Buffer.from(key)
-      ]);
-      
-      this.socket!.write(cmd);
-      
-      this.socket!.once('data', (data) => {
-        // Parse binary response
-        if (data.length < 5) {
-          resolve(null);
-          return;
-        }
-        
-        const type = data[0];
-        const length = data.readUInt32BE(1);
-        
-        if (type === 0x06) { // NULL_VALUE
-          resolve(null);
-        } else if (type === 0x04 || type === 0x01) { // BULK_STRING or SIMPLE_STRING
-          const value = data.slice(5, 5 + length).toString();
-          resolve(value);
-        } else {
-          resolve(null);
-        }
-      });
-    });
+    return await this.sendCommand(['GET', key]);
   }
 
   async set(key: string, value: string, ttl?: number): Promise<void> {
-    if (!this.socket) throw new Error('Not connected');
-    
-    return new Promise((resolve) => {
-      // Build binary protocol message for SET command
-      // Array with ["SET", key, value] or ["SET", key, value, "EX", ttl]
-      const parts = [];
-      const cmdParts = ['SET', key, value];
-      if (ttl) {
-        cmdParts.push('EX', ttl.toString());
-      }
-      
-      // Build array header
-      parts.push(Buffer.from([0x05])); // ARRAY type
-      parts.push(Buffer.from([0x00, 0x00, 0x00, cmdParts.length])); // Number of elements
-      
-      // Add each part as BULK_STRING
-      for (const part of cmdParts) {
-        const partStr = String(part);
-        parts.push(Buffer.from([0x04])); // BULK_STRING type
-        const lengthBuf = Buffer.allocUnsafe(4);
-        lengthBuf.writeUInt32BE(partStr.length, 0);
-        parts.push(lengthBuf);
-        parts.push(Buffer.from(partStr));
-      }
-      
-      const cmd = Buffer.concat(parts);
-      this.socket!.write(cmd);
-      
-      this.socket!.once('data', () => {
-        resolve();
-      });
-    });
+    const args = ['SET', key, value];
+    if (ttl) {
+      args.push('EX', ttl.toString());
+    }
+    await this.sendCommand(args);
   }
 
   async ping(): Promise<string> {
-    if (!this.socket) throw new Error('Not connected');
-    
-    return new Promise((resolve) => {
-      // Build binary protocol message for PING command
-      // Array with ["PING"]
-      const cmd = Buffer.concat([
-        Buffer.from([0x05]), // ARRAY type
-        Buffer.from([0x00, 0x00, 0x00, 0x01]), // Length 1 (1 element)
-        Buffer.from([0x04]), // BULK_STRING type for "PING"
-        Buffer.from([0x00, 0x00, 0x00, 0x04]), // Length 4
-        Buffer.from('PING')
-      ]);
-      
-      this.socket!.write(cmd);
-      
-      this.socket!.once('data', (data) => {
-        // Parse binary response - expect SIMPLE_STRING "PONG"
-        if (data.length >= 5) {
-          const type = data[0];
-          const length = data.readUInt32BE(1);
-          if (type === 0x01) { // SIMPLE_STRING
-            const value = data.slice(5, 5 + length).toString();
-            resolve(value);
-            return;
-          }
-        }
-        resolve('PONG');
-      });
-    });
+    const result = await this.sendCommand(['PING']);
+    return result || 'PONG';
   }
 
   disconnect(): void {
@@ -153,19 +108,17 @@ export async function setupRedis(): Promise<void> {
   const useScuffed = process.env.USE_SCUFFED_REDIS === 'true';
   
   if (useScuffed) {
-    // Try to connect to ScuffedRedis C++ server
     try {
       scuffedRedisClient = new ScuffedRedisClient('localhost', 6379);
       await scuffedRedisClient.connect();
       useScuffedRedis = true;
-      console.log('🔥 Using ScuffedRedis C++ server');
+      console.log('Connected to ScuffedRedis C++ server');
       return;
     } catch (error) {
-      console.log('⚠️ ScuffedRedis not available, falling back to standard Redis');
+      console.log('ScuffedRedis not available, falling back to Redis');
     }
   }
   
-  // Fall back to standard Redis
   redis = new Redis(redisUrl, {
     retryDelayOnFailover: 100,
     maxRetriesPerRequest: 3,
@@ -173,11 +126,11 @@ export async function setupRedis(): Promise<void> {
   });
 
   redis.on('connect', () => {
-    console.log('✅ Connected to standard Redis');
+    console.log('Connected to Redis');
   });
 
   redis.on('error', (err) => {
-    console.error('❌ Redis connection error:', err);
+    console.error('Redis connection error:', err);
   });
 
   await redis.connect();
