@@ -1,4 +1,7 @@
-export const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+export const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 
+  (typeof window !== 'undefined' && window.location.origin ? 
+   `${window.location.origin}/scuffedredis/api` : 
+   'http://localhost:4000');
 
 export const CONFIG = {
   // 3D Scene configuration

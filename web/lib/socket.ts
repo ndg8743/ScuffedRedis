@@ -10,7 +10,11 @@ class SocketManager {
   connect() {
     if (this.socket?.connected) return;
 
-    this.socket = io(SERVER_URL, {
+    const socketUrl = typeof window !== 'undefined' && window.location.origin ?
+      window.location.origin : 'http://localhost:4000';
+
+    this.socket = io(socketUrl, {
+      path: '/scuffedredis/socket.io/',
       transports: ['websocket'],
       timeout: 5000,
     });
