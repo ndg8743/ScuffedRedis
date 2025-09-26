@@ -1,7 +1,8 @@
 import Redis from 'ioredis';
-import net from 'net';
+import { SimpleRedisClient } from './simple-redis';
 
 let redis: Redis | null = null;
+let simpleClient: SimpleRedisClient | null = null;
 let useScuffedRedis = false;
 
 class ScuffedRedisClient {
@@ -109,13 +110,13 @@ export async function setupRedis(): Promise<void> {
   
   if (useScuffed) {
     try {
-      scuffedRedisClient = new ScuffedRedisClient('localhost', 6379);
-      await scuffedRedisClient.connect();
+      simpleClient = new SimpleRedisClient('localhost', 6379);
+      await simpleClient.connect();
       useScuffedRedis = true;
-      console.log('Connected to ScuffedRedis C++ server');
+      console.log('Connected to Simple Redis C++ server');
       return;
     } catch (error) {
-      console.log('ScuffedRedis not available, falling back to Redis');
+      console.log('Simple Redis not available, falling back to standard Redis');
     }
   }
   
@@ -126,7 +127,7 @@ export async function setupRedis(): Promise<void> {
   });
 
   redis.on('connect', () => {
-    console.log('Connected to Redis');
+    console.log('Connected to standard Redis');
   });
 
   redis.on('error', (err) => {
@@ -138,8 +139,8 @@ export async function setupRedis(): Promise<void> {
 }
 
 export async function redisGet(key: string): Promise<string | null> {
-  if (useScuffedRedis && scuffedRedisClient) {
-    return await scuffedRedisClient.get(key);
+  if (useScuffedRedis && simpleClient) {
+    return await simpleClient.get(key);
   } else if (redis) {
     return await redis.get(key);
   }
@@ -147,8 +148,8 @@ export async function redisGet(key: string): Promise<string | null> {
 }
 
 export async function redisSet(key: string, value: string, ttl?: number): Promise<void> {
-  if (useScuffedRedis && scuffedRedisClient) {
-    await scuffedRedisClient.set(key, value, ttl);
+  if (useScuffedRedis && simpleClient) {
+    await simpleClient.set(key, value);
   } else if (redis) {
     if (ttl) {
       await redis.setex(key, ttl, value);
@@ -161,8 +162,8 @@ export async function redisSet(key: string, value: string, ttl?: number): Promis
 }
 
 export async function redisPing(): Promise<string> {
-  if (useScuffedRedis && scuffedRedisClient) {
-    return await scuffedRedisClient.ping();
+  if (useScuffedRedis && simpleClient) {
+    return await simpleClient.ping();
   } else if (redis) {
     return await redis.ping();
   }
