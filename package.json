@@ -8,20 +8,10 @@
     "web"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:cpp\" \"npm run dev:server\" \"npm run dev:web\"",
-    "dev:cpp": "cd . && mkdir -p build && cd build && cmake .. && make && ./scuffed-redis-server",
-    "dev:server": "npm run dev --prefix server",
-    "dev:web": "npm run dev --prefix web",
-    "build:cpp": "mkdir -p build && cd build && cmake .. && make",
-    "build": "npm run build:cpp && npm run build --prefix server && npm run build --prefix web",
-    "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
-    "install:all": "npm install && npm install --prefix server && npm install --prefix web",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
+    "build": "mkdir -p build && cd build && cmake .. && make",
+    "dev": "npm run build && concurrently \"./build/redis-server\" \"npm run dev --prefix server\" \"npm run dev --prefix web\"",
     "deploy": "./deploy.sh",
-    "test:integration": "node test-integration.js"
+    "install:all": "npm install && npm install --prefix server && npm install --prefix web"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
