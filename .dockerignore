@@ -2,54 +2,29 @@
 .git
 .gitignore
 
-# Documentation
-README.md
-*.md
-
-# Development files
-.env*
-!env.production
-test-integration.js
-
-# Node modules
+# Node modules (will be installed in container)
 node_modules
-*/node_modules
+server/node_modules  
+web/node_modules
 npm-debug.log*
 
-# Build artifacts
+# Build artifacts (will be built in container)
 build/
-dist/
-.next/
-out/
+server/dist/
+web/.next/
+
+# Development files
+*.log
+.env*
+
+# Documentation
+*.md
+!README.md
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Logs
-logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-
-# nyc test coverage
-.nyc_output
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
