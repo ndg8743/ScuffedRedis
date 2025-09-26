@@ -5,9 +5,7 @@
 namespace scuffedredis {
 namespace protocol {
 
-// ============================================================================
 // Message Implementation
-// ============================================================================
 
 MessagePtr Message::make_simple_string(const std::string& str) {
     auto msg = std::make_shared<Message>(MessageType::SIMPLE_STRING);
@@ -176,9 +174,7 @@ size_t Message::serialized_size() const {
     return size;
 }
 
-// ============================================================================
 // Parser Implementation
-// ============================================================================
 
 Parser::Parser() {
     buffer_.reserve(4096);  // Reserve initial space for efficiency
@@ -356,9 +352,7 @@ void Parser::reset() {
     buffer_.clear();
 }
 
-// ============================================================================
 // Protocol Utilities
-// ============================================================================
 
 namespace utils {
 

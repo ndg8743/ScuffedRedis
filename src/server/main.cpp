@@ -1,9 +1,4 @@
-/**
- * ScuffedRedis Server
- * 
- * Entry point for the Redis server implementation.
- * Now includes full Redis command support with KV store.
- */
+// ScuffedRedis Server - Entry point
 
 #include "network/tcp_server.hpp"
 #include "server/command_handler.hpp"
@@ -47,10 +42,7 @@ int main(int argc, char* argv[]) {
     // Configure logging
     Logger::instance().set_level(LogLevel::INFO);
     
-    std::cout << "ScuffedRedis Server v0.2.0" << std::endl;
-    std::cout << "========================================" << std::endl;
-    std::cout << "Full Redis command support enabled" << std::endl;
-    std::cout << "========================================" << std::endl;
+    std::cout << "Redis Server v1.0.0" << std::endl;
     
     // Set up signal handlers for graceful shutdown
     signal(SIGINT, signal_handler);
