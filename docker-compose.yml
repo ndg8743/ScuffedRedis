@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  scuffed-redis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "6379:6379"
+      - "4000:4000"
+      - "3000:3000"
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: make run
+    environment:
+      - NODE_ENV=development
+    networks:
+      - scuffed-network
+
+networks:
+  scuffed-network:
+    driver: bridge
