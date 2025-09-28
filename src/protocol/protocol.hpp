@@ -1,23 +1,9 @@
 #ifndef SCUFFEDREDIS_PROTOCOL_HPP
 #define SCUFFEDREDIS_PROTOCOL_HPP
 
-/**
- * ScuffedRedis Protocol Definition
- * 
- * Defines the binary protocol for client-server communication.
- * Similar to Redis RESP but simplified for learning purposes.
- * 
- * Protocol Format:
- * [Type:1 byte][Length:4 bytes][Data:N bytes]
- * 
- * Type codes:
- * - 0x01: Simple String (OK, PONG, etc.)
- * - 0x02: Error
- * - 0x03: Integer
- * - 0x04: Bulk String (binary safe)
- * - 0x05: Array
- * - 0x06: Null
- */
+// ScuffedRedis Binary Protocol
+// Format: [Type:1][Length:4][Data:N]
+// Types: String(1), Error(2), Integer(3), BulkString(4), Array(5), Null(6)
 
 #include <cstdint>
 #include <string>
@@ -28,14 +14,13 @@
 namespace scuffedredis {
 namespace protocol {
 
-// Protocol constants
 enum class MessageType : uint8_t {
-    SIMPLE_STRING = 0x01,  // Simple string response
-    ERROR_MSG = 0x02,      // Error message
-    INTEGER = 0x03,        // Integer value
-    BULK_STRING = 0x04,    // Binary-safe string
-    ARRAY = 0x05,          // Array of messages
-    NULL_VALUE = 0x06      // Null/nil response
+    SIMPLE_STRING = 0x01,
+    ERROR_MSG = 0x02,
+    INTEGER = 0x03,
+    BULK_STRING = 0x04,
+    ARRAY = 0x05,
+    NULL_VALUE = 0x06
 };
 
 // Forward declarations
