@@ -1,9 +1,4 @@
-/**
- * ScuffedRedis CLI Client
- * 
- * Command-line interface for interacting with the Redis server.
- * Uses Redis protocol for communication.
- */
+// ScuffedRedis CLI Client
 
 #include "client/redis_client.hpp"
 #include "utils/logger.hpp"
@@ -16,10 +11,7 @@
 
 using namespace scuffedredis;
 
-/**
- * Trim whitespace from string.
- * Used to clean up user input.
- */
+// Remove whitespace from string
 std::string trim(const std::string& str) {
     size_t first = str.find_first_not_of(" \t\r\n");
     if (first == std::string::npos) return "";
