@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { TopBar } from '@/components/TopBar';
 import { Legend } from '@/components/Legend';
+import { CommandPlayground } from '@/components/CommandPlayground';
+import { EducationalPopups } from '@/components/EducationalPopups';
+import { WorkshopScenarios } from '@/components/WorkshopScenarios';
+import { WorkshopControlPanel } from '@/components/WorkshopControlPanel';
 import { socketManager } from '@/lib/socket';
 import { useAppStore } from '@/lib/state';
 import { SERVER_URL } from '@/lib/config';
@@ -17,10 +21,14 @@ const Scene = dynamic(() => import('@/components/Scene').then(mod => ({ default:
 export default function HomePage() {
   const { updateHitRatio } = useAppStore();
   const [mounted, setMounted] = useState(false);
+  const [showCommandPlayground, setShowCommandPlayground] = useState(false);
+  const [showEducationalPopups, setShowEducationalPopups] = useState(false);
+  const [showWorkshopScenarios, setShowWorkshopScenarios] = useState(false);
+  const [showWorkshopControl, setShowWorkshopControl] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    
+
     // Connect to Socket.IO
     socketManager.connect();
 
@@ -66,12 +74,41 @@ export default function HomePage() {
       <div className="scene-container">
         <Scene />
       </div>
-      
+
       {/* UI Overlay */}
       <div className="ui-overlay">
-        <TopBar />
+        <TopBar
+          onOpenCommandPlayground={() => setShowCommandPlayground(true)}
+          onOpenEducational={() => setShowEducationalPopups(true)}
+          onOpenWorkshop={() => setShowWorkshopScenarios(true)}
+          onOpenControl={() => setShowWorkshopControl(true)}
+        />
         <Legend />
       </div>
+
+      {/* Command Playground Modal */}
+      <CommandPlayground
+        isOpen={showCommandPlayground}
+        onClose={() => setShowCommandPlayground(false)}
+      />
+
+      {/* Educational Popups Modal */}
+      <EducationalPopups
+        isOpen={showEducationalPopups}
+        onClose={() => setShowEducationalPopups(false)}
+      />
+
+      {/* Workshop Scenarios Modal */}
+      <WorkshopScenarios
+        isOpen={showWorkshopScenarios}
+        onClose={() => setShowWorkshopScenarios(false)}
+      />
+
+      {/* Workshop Control Panel Modal */}
+      <WorkshopControlPanel
+        isOpen={showWorkshopControl}
+        onClose={() => setShowWorkshopControl(false)}
+      />
     </div>
   );
 }
