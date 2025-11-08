@@ -20,8 +20,8 @@ This project combines a custom Redis implementation (ScuffedRedis) written in C+
 
 ### React Frontend
 - **Port**: 3000
-- **Framework**: Next.js 14 with App Router
-- **3D Engine**: React Three Fiber (Three.js)
+- **Framework**: Next.js 14.2.33
+- **3D Engine**: React Three Fiber 8.13.0 (Three.js 0.159.0)
 - **UI Components**: shadcn/ui with Tailwind CSS
 - **State Management**: Zustand
 - **Real-time Updates**: Socket.IO client
@@ -141,6 +141,10 @@ This project combines a custom Redis implementation (ScuffedRedis) written in C+
 - **Integration Tests**: Protocol and networking
 - **Performance Tests**: Benchmark operations
 - **CLI Client**: Interactive testing tool
+
+### Known Issues
+- **`three-mesh-bvh`:** There is a known issue where `three-mesh-bvh` may try to import `BatchedMesh` from `three`, which is not available in all versions. This can cause build errors. To resolve this, make sure you are using compatible versions of `three`, `@react-three/drei`, and `@react-three/fiber`.
+
 
 ## 🎯 Performance Characteristics
 

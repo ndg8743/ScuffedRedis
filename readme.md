@@ -61,6 +61,19 @@ This starts:
 ### 3. Open the Application
 Navigate to `http://localhost:3000`
 
+## Dependencies
+
+This project uses the following main dependencies:
+
+- **React:** 18.2.0
+- **Next.js:** 14.2.33
+- **Three.js:** 0.159.0
+- **ioredis:** 5.3.2
+
+**Note on `three-mesh-bvh`:**
+
+There is a known issue with `three-mesh-bvh` where it may try to import `BatchedMesh` from `three`, which is not available in all versions. This can cause build errors. To resolve this, make sure you are using compatible versions of `three`, `@react-three/drei`, and `@react-three/fiber`.
+
 ## How It Works
 
 ### Cache-Aside Pattern
@@ -93,6 +106,7 @@ The backend implements a cache-aside pattern:
 **Backend** (`server/.env`):
 ```env
 PORT=4000
+# Set to true to use the custom C++ Redis server, or false to use a standard Redis instance
 USE_SCUFFED_REDIS=true
 ```
 
