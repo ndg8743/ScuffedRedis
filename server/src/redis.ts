@@ -93,6 +93,36 @@ class ScuffedRedisClient {
     return result || 'PONG';
   }
 
+  async del(key: string): Promise<number> {
+    const result = await this.sendCommand(['DEL', key]);
+    return parseInt(result) || 0;
+  }
+
+  async exists(key: string): Promise<number> {
+    const result = await this.sendCommand(['EXISTS', key]);
+    return parseInt(result) || 0;
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    const result = await this.sendCommand(['KEYS', pattern]);
+    // Parse array response
+    if (!result) return [];
+    return result.split(',').filter((k: string) => k.length > 0);
+  }
+
+  async flushdb(): Promise<void> {
+    await this.sendCommand(['FLUSHDB']);
+  }
+
+  async info(): Promise<string> {
+    return await this.sendCommand(['INFO']) || '';
+  }
+
+  async dbsize(): Promise<number> {
+    const result = await this.sendCommand(['DBSIZE']);
+    return parseInt(result) || 0;
+  }
+
   disconnect(): void {
     if (this.socket) {
       this.socket.destroy();
@@ -104,15 +134,16 @@ class ScuffedRedisClient {
 let scuffedRedisClient: ScuffedRedisClient | null = null;
 
 export async function setupRedis(): Promise<void> {
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6380';
   const useScuffed = process.env.USE_SCUFFED_REDIS === 'true';
-  
+  const scuffedPort = parseInt(process.env.SCUFFED_REDIS_PORT || '6380');
+
   if (useScuffed) {
     try {
-      scuffedRedisClient = new ScuffedRedisClient('localhost', 6379);
+      scuffedRedisClient = new ScuffedRedisClient('localhost', scuffedPort);
       await scuffedRedisClient.connect();
       useScuffedRedis = true;
-      console.log('Connected to ScuffedRedis C++ server');
+      console.log(`Connected to ScuffedRedis C++ server on port ${scuffedPort}`);
       return;
     } catch (error) {
       console.log('ScuffedRedis not available, falling back to Redis');
@@ -120,7 +151,9 @@ export async function setupRedis(): Promise<void> {
   }
   
   redis = new Redis(redisUrl, {
-    retryDelayOnFailover: 100,
+    retryStrategy: (times) => {
+      return 100;
+    },
     maxRetriesPerRequest: 3,
     lazyConnect: true
   });
@@ -169,8 +202,64 @@ export async function redisPing(): Promise<string> {
   throw new Error('No Redis client available');
 }
 
+export async function redisDel(key: string): Promise<number> {
+  if (useScuffedRedis && scuffedRedisClient) {
+    return await scuffedRedisClient.del(key);
+  } else if (redis) {
+    return await redis.del(key);
+  }
+  throw new Error('No Redis client available');
+}
+
+export async function redisExists(key: string): Promise<number> {
+  if (useScuffedRedis && scuffedRedisClient) {
+    return await scuffedRedisClient.exists(key);
+  } else if (redis) {
+    return await redis.exists(key);
+  }
+  throw new Error('No Redis client available');
+}
+
+export async function redisKeys(pattern: string): Promise<string[]> {
+  if (useScuffedRedis && scuffedRedisClient) {
+    return await scuffedRedisClient.keys(pattern);
+  } else if (redis) {
+    return await redis.keys(pattern);
+  }
+  throw new Error('No Redis client available');
+}
+
+export async function redisFlushdb(): Promise<void> {
+  if (useScuffedRedis && scuffedRedisClient) {
+    await scuffedRedisClient.flushdb();
+  } else if (redis) {
+    await redis.flushdb();
+  } else {
+    throw new Error('No Redis client available');
+  }
+}
+
+export async function redisInfo(): Promise<string> {
+  if (useScuffedRedis && scuffedRedisClient) {
+    return await scuffedRedisClient.info();
+  } else if (redis) {
+    const info = await redis.info();
+    return info;
+  }
+  throw new Error('No Redis client available');
+}
+
+export async function redisDbsize(): Promise<number> {
+  if (useScuffedRedis && scuffedRedisClient) {
+    return await scuffedRedisClient.dbsize();
+  } else if (redis) {
+    return await redis.dbsize();
+  }
+  throw new Error('No Redis client available');
+}
+
 export function getRedisType(): string {
-  return useScuffedRedis ? 'ScuffedRedis C++' : 'Standard Redis';
+  return useScuffedRedis ? 'ScuffedRedis C++ (Full Implementation)' : 'Standard Redis';
 }
 
 export async function closeRedis(): Promise<void> {
