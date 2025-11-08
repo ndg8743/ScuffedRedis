@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 # Simple server executable (for comparison)
-add_executable(simple-redis-server simple_server.cpp)
+add_executable(simple-redis-server src/server/simple_server.cpp)
 
 # Full Redis server implementation
 set(SERVER_SOURCES
