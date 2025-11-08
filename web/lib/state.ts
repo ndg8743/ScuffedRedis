@@ -83,5 +83,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   isConnected: false,
   setConnected: (connected) => {
     set({ isConnected: connected });
+  },
+
+  // Workshop mode
+  workshopMode: false,
+  setWorkshopMode: (mode) => {
+    set({ workshopMode: mode });
+  },
+  setCurrentScenario: (scenario) => {
+    set({ currentScenario: scenario });
   }
 }));
