@@ -19,7 +19,7 @@ const Scene = dynamic(() => import('@/components/Scene').then(mod => ({ default:
 });
 
 export default function HomePage() {
-  const { updateHitRatio } = useAppStore();
+  const { updateHitRatio, events, updateOpsPerSecond } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [showCommandPlayground, setShowCommandPlayground] = useState(false);
   const [showEducationalPopups, setShowEducationalPopups] = useState(false);
@@ -55,7 +55,21 @@ export default function HomePage() {
       clearInterval(interval);
       socketManager.disconnect();
     };
-  }, [updateHitRatio]);
+  }, [updateHitRatio, updateOpsPerSecond]);
+
+  // Calculate operations per second from events
+  useEffect(() => {
+    if (events.length < 2) return;
+
+    const now = Date.now();
+    const oneSecondAgo = now - 1000;
+
+    // Count events in the last second
+    const recentEvents = events.filter(e => e.timestamp >= oneSecondAgo);
+    const opsPerSecond = recentEvents.length;
+
+    updateOpsPerSecond(opsPerSecond);
+  }, [events, updateOpsPerSecond]);
 
   if (!mounted) {
     return (
