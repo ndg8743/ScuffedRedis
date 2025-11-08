@@ -19,8 +19,8 @@ if ! command -v docker-compose &> /dev/null; then
 fi
 
 # Load production environment
-if [ -f env.production ]; then
-    source env.production
+if [ -f docker/env.production ]; then
+    source docker/env.production
     echo "✅ Loaded production environment"
 else
     echo "⚠️  No env.production file found, using defaults"
@@ -28,15 +28,15 @@ fi
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose down --remove-orphans
+docker-compose -f docker/docker-compose.yml down --remove-orphans
 
 # Remove old images (optional - uncomment to force rebuild)
 # echo "🗑️  Removing old images..."
-# docker-compose down --rmi all
+# docker-compose -f docker/docker-compose.yml down --rmi all
 
 # Build and start services
 echo "🔨 Building and starting services..."
-docker-compose up --build -d
+docker-compose -f docker/docker-compose.yml up --build -d
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to start..."
@@ -46,7 +46,7 @@ sleep 10
 echo "🔍 Checking service health..."
 
 # Check C++ Redis server
-if docker-compose exec -T redis-server timeout 5 bash -c '</dev/tcp/localhost/6379' 2>/dev/null; then
+if docker-compose -f docker/docker-compose.yml exec -T redis-server timeout 5 bash -c '</dev/tcp/localhost/6379' 2>/dev/null; then
     echo "✅ C++ Redis server is healthy"
 else
     echo "❌ C++ Redis server is not responding"
@@ -54,7 +54,7 @@ else
 fi
 
 # Check backend server
-if docker-compose exec -T server wget --no-verbose --tries=1 --spider http://localhost:4000/health 2>/dev/null; then
+if docker-compose -f docker/docker-compose.yml exec -T server wget --no-verbose --tries=1 --spider http://localhost:4000/health 2>/dev/null; then
     echo "✅ Backend server is healthy"
 else
     echo "❌ Backend server is not responding"
@@ -77,11 +77,11 @@ echo "   🌐 http://gopee.dev/scuffedredis"
 echo "   📡 API: http://gopee.dev/api"
 echo ""
 echo "📋 Service Status:"
-docker-compose ps
+docker-compose -f docker/docker-compose.yml ps
 
 echo ""
 echo "📝 View logs with:"
-echo "   docker-compose logs -f"
+echo "   docker-compose -f docker/docker-compose.yml logs -f"
 echo ""
 echo "🛑 Stop services with:"
-echo "   docker-compose down"
+echo "   docker-compose -f docker/docker-compose.yml down"
