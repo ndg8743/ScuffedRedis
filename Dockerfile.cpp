@@ -22,5 +22,5 @@ RUN mkdir -p build && cd build && \
 # Expose the Redis port
 EXPOSE 6379
 
-# Run the server
-CMD ["./build/scuffed-redis-server", "6379", "0.0.0.0"]
+# Run the server (binary name from CMake target)
+CMD ["./build/redis-server", "6379", "0.0.0.0"]

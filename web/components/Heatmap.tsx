@@ -27,8 +27,8 @@ export function Heatmap() {
       states.push({
         colorTimer: 0,
         pulseTimer: 0,
-        targetColor: CONFIG.COLORS.NEUTRAL,
-        currentColor: CONFIG.COLORS.NEUTRAL,
+        targetColor: [...CONFIG.COLORS.NEUTRAL] as [number, number, number],
+        currentColor: [...CONFIG.COLORS.NEUTRAL] as [number, number, number],
         scale: 1,
         targetScale: 1,
       });
@@ -46,7 +46,7 @@ export function Heatmap() {
     
     if (cellState) {
       // Set target color based on hit/miss
-      cellState.targetColor = latestEvent.hit ? CONFIG.COLORS.HIT : CONFIG.COLORS.MISS;
+      cellState.targetColor = [...(latestEvent.hit ? CONFIG.COLORS.HIT : CONFIG.COLORS.MISS)] as [number, number, number];
       cellState.targetScale = 1.2;
       
       // Reset timers
@@ -89,10 +89,11 @@ export function Heatmap() {
   // Animation loop
   useFrame((state, delta) => {
     if (!meshRef.current) return;
-    
+    const mesh = meshRef.current;
+
     const deltaMs = delta * 1000;
-    
-    cellStates.forEach((cellState, index) => {
+
+    cellStates.forEach((cellState: CellState, index: number) => {
       // Update color animation
       if (cellState.colorTimer > 0) {
         cellState.colorTimer -= deltaMs;
@@ -107,7 +108,7 @@ export function Heatmap() {
         
         // Fade back to neutral when timer expires
         if (cellState.colorTimer <= 0) {
-          cellState.targetColor = CONFIG.COLORS.NEUTRAL;
+          cellState.targetColor = [...CONFIG.COLORS.NEUTRAL] as [number, number, number];
         }
       } else {
         // Fade to neutral
@@ -137,13 +138,13 @@ export function Heatmap() {
         cellState.currentColor[1],
         cellState.currentColor[2]
       );
-      meshRef.current.setColorAt(index, color);
-      
+      mesh.setColorAt(index, color);
+
       // Update scale (this would require updating the instance matrix)
       // For simplicity, we'll just use color changes
     });
-    
-    meshRef.current.instanceColor!.needsUpdate = true;
+
+    mesh.instanceColor!.needsUpdate = true;
   });
 
   return (

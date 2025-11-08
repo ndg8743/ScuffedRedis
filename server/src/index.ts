@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import cors from 'cors';
 import { config } from 'dotenv';
 import { setupRedis, getRedisType } from './redis';
@@ -26,45 +26,63 @@ app.use(cors());
 app.use(express.json());
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
-// Warm up cache with N items
-app.post('/warmup', async (req, res) => {
-  const count = parseInt(req.query.count as string) || 50;
-  const { getItem } = await setupCache();
-  
-  const warmupPromises = [];
-  for (let i = 0; i < count; i++) {
-    warmupPromises.push(getItem(i + 1));
+// Cache getter captured at startup for reuse
+let getItemFn: ((id: number) => Promise<any>) | null = null;
+
+// Warm up cache with N items (fire-and-forget to avoid upstream timeouts)
+app.post('/warmup', async (req: Request, res: Response) => {
+  const count = parseInt((req.query.count as string) || '50', 10);
+
+  // Ensure we have a getter; lazily initialize if missing
+  if (!getItemFn) {
+    const { getItem } = await setupCache();
+    getItemFn = getItem;
   }
-  
-  await Promise.all(warmupPromises);
-  res.json({ warmed: count });
+
+  const startedAt = Date.now();
+  const ids = Array.from({ length: count }, (_, i) => i + 1);
+
+  // Run in background; log completion
+  (async () => {
+    try {
+      const promises = ids.map((id) => getItemFn!(id));
+      await Promise.allSettled(promises);
+      const ms = Date.now() - startedAt;
+      console.log(`Warmup completed: ${count} items in ${ms}ms`);
+    } catch (e) {
+      console.error('Warmup error:', e);
+    }
+  })();
+
+  res.status(202).json({ status: 'accepted', count });
 });
 
 // Get hit ratio stats
-app.get('/hitratio', (req, res) => {
-  const stats = global.cacheStats || { hits: 0, misses: 0, ratio: 0 };
+app.get('/hitratio', (req: Request, res: Response) => {
+  const stats = (global as any).cacheStats || { hits: 0, misses: 0, ratio: 0 };
   res.json(stats);
 });
 
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
   console.log('Client connected:', socket.id);
-  
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
 
-global.cacheStats = { hits: 0, misses: 0, ratio: 0 };
+(global as any).cacheStats = { hits: 0, misses: 0, ratio: 0 };
 
 async function startServer() {
   try {
     await setupRedis();
     const { getItem } = await setupCache();
-    
+    getItemFn = getItem;
+
     startTrafficGenerator(getItem, io);
     
     server.listen(PORT, () => {

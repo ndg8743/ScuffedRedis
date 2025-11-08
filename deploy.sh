@@ -13,8 +13,9 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose is not installed. Please install Docker Compose first."
+# Check for Docker Compose plugin (docker compose)
+if ! docker compose version &> /dev/null; then
+    echo "❌ Docker Compose plugin is not available. Please install the Docker Compose plugin or upgrade Docker (Docker Engine >= 20.10)."
     exit 1
 fi
 
@@ -28,15 +29,15 @@ fi
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
 
 # Remove old images (optional - uncomment to force rebuild)
 # echo "🗑️  Removing old images..."
-# docker-compose down --rmi all
+# docker compose down --rmi all
 
 # Build and start services
 echo "🔨 Building and starting services..."
-docker-compose up --build -d
+docker compose up --build -d
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to start..."
@@ -46,7 +47,7 @@ sleep 10
 echo "🔍 Checking service health..."
 
 # Check C++ Redis server
-if docker-compose exec -T redis-server timeout 5 bash -c '</dev/tcp/localhost/6379' 2>/dev/null; then
+if docker compose exec -T redis-server timeout 5 bash -c '</dev/tcp/localhost/6379' 2>/dev/null; then
     echo "✅ C++ Redis server is healthy"
 else
     echo "❌ C++ Redis server is not responding"
@@ -54,7 +55,7 @@ else
 fi
 
 # Check backend server
-if docker-compose exec -T server wget --no-verbose --tries=1 --spider http://localhost:4000/health 2>/dev/null; then
+if docker compose exec -T server wget --no-verbose --tries=1 --spider http://localhost:4000/health 2>/dev/null; then
     echo "✅ Backend server is healthy"
 else
     echo "❌ Backend server is not responding"
@@ -77,11 +78,11 @@ echo "   🌐 http://gopee.dev/scuffedredis"
 echo "   📡 API: http://gopee.dev/api"
 echo ""
 echo "📋 Service Status:"
-docker-compose ps
+docker compose ps
 
 echo ""
 echo "📝 View logs with:"
-echo "   docker-compose logs -f"
+echo "   docker compose logs -f"
 echo ""
 echo "🛑 Stop services with:"
-echo "   docker-compose down"
+echo "   docker compose down"

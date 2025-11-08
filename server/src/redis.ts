@@ -68,8 +68,8 @@ class ScuffedRedisClient {
     return new Promise((resolve) => {
       const cmd = this.buildCommand(args);
       this.socket!.write(cmd);
-      
-      this.socket!.once('data', (data) => {
+
+      this.socket!.once('data', (data: Buffer) => {
         const result = this.parseResponse(data);
         resolve(result);
       });
@@ -104,12 +104,17 @@ class ScuffedRedisClient {
 let scuffedRedisClient: ScuffedRedisClient | null = null;
 
 export async function setupRedis(): Promise<void> {
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  // Use service name for Docker network discovery instead of localhost
+  const redisHost = process.env.REDIS_HOST || 'scuffed-redis-server';
+  const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+  const redisUrl = process.env.REDIS_URL || `redis://${redisHost}:${redisPort}`;
   const useScuffed = process.env.USE_SCUFFED_REDIS === 'true';
-  
+
   if (useScuffed) {
     try {
-      scuffedRedisClient = new ScuffedRedisClient('localhost', 6379);
+      const scuffedHost = process.env.SCUFFED_REDIS_HOST || 'scuffed-redis-server';
+      const scuffedPort = parseInt(process.env.SCUFFED_REDIS_PORT || '6379', 10);
+      scuffedRedisClient = new ScuffedRedisClient(scuffedHost, scuffedPort);
       await scuffedRedisClient.connect();
       useScuffedRedis = true;
       console.log('Connected to ScuffedRedis C++ server');
@@ -118,11 +123,12 @@ export async function setupRedis(): Promise<void> {
       console.log('ScuffedRedis not available, falling back to Redis');
     }
   }
-  
+
   redis = new Redis(redisUrl, {
-    retryDelayOnFailover: 100,
+    // Retry strategy: backoff up to 2s
+    retryStrategy: (times: number) => Math.min(100 + times * 100, 2000),
     maxRetriesPerRequest: 3,
-    lazyConnect: true
+    lazyConnect: true,
   });
 
   redis.on('connect', () => {

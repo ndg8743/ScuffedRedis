@@ -4,7 +4,8 @@ WORKDIR /app
 
 # Copy package files
 COPY web/package*.json ./
-RUN npm ci
+# Using npm install instead of npm ci because a lockfile is not committed; ci fails without a synchronized package-lock.json.
+RUN npm install
 
 # Copy source code
 COPY web/ ./
@@ -21,8 +22,7 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy built application
-COPY --from=builder /app/public ./public
+# Copy built application (Next.js standalone output + static assets)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
@@ -30,7 +30,7 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 CMD ["node", "server.js"]

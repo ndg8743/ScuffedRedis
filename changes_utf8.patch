@@ -1,0 +1,456 @@
+diff --git a/Dockerfile.cpp b/Dockerfile.cpp
+index 96ee588..249985b 100644
+--- a/Dockerfile.cpp
++++ b/Dockerfile.cpp
+@@ -13,6 +13,7 @@ WORKDIR /app
+ # Copy source code
+ COPY src/ ./src/
+ COPY CMakeLists.txt ./
++COPY simple_server.cpp ./
+ 
+ # Build the application
+ RUN mkdir -p build && cd build && \
+@@ -22,5 +23,5 @@ RUN mkdir -p build && cd build && \
+ # Expose the Redis port
+ EXPOSE 6379
+ 
+-# Run the server
+-CMD ["./build/scuffed-redis-server", "6379", "0.0.0.0"]
++# Run the server (binary name from CMake target)
++CMD ["./build/redis-server", "6379", "0.0.0.0"]
+diff --git a/Dockerfile.server b/Dockerfile.server
+index 40e26a5..c1f078f 100644
+--- a/Dockerfile.server
++++ b/Dockerfile.server
+@@ -2,20 +2,20 @@ FROM node:18-alpine
+ 
+ WORKDIR /app
+ 
+-# Copy package files
++# Copy package manifest and install all deps (dev needed for build typings)
+ COPY server/package*.json ./
+-RUN npm ci --only=production
++RUN npm install
+ 
+-# Copy source code
++# Copy source and tsconfig
+ COPY server/src/ ./src/
+ COPY server/tsconfig.json ./
+ 
+-# Install TypeScript and build
+-RUN npm install -g typescript && \
+-    tsc
++# Build TypeScript
++RUN npx tsc
++
++# Remove dev dependencies to slim image (optional; keep if debugging)
++RUN npm prune --production
+ 
+-# Expose the port
+ EXPOSE 4000
+ 
+-# Start the server
+ CMD ["node", "dist/index.js"]
+diff --git a/Dockerfile.web b/Dockerfile.web
+index f3010ce..adcd8f0 100644
+--- a/Dockerfile.web
++++ b/Dockerfile.web
+@@ -4,7 +4,8 @@ WORKDIR /app
+ 
+ # Copy package files
+ COPY web/package*.json ./
+-RUN npm ci
++# Using npm install instead of npm ci because a lockfile is not committed; ci fails without a synchronized package-lock.json.
++RUN npm install
+ 
+ # Copy source code
+ COPY web/ ./
+@@ -21,8 +22,7 @@ WORKDIR /app
+ RUN addgroup --system --gid 1001 nodejs
+ RUN adduser --system --uid 1001 nextjs
+ 
+-# Copy built application
+-COPY --from=builder /app/public ./public
++# Copy built application (Next.js standalone output + static assets)
+ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+ 
+@@ -30,7 +30,7 @@ USER nextjs
+ 
+ EXPOSE 3000
+ 
+-ENV PORT 3000
+-ENV HOSTNAME "0.0.0.0"
++ENV PORT=3000
++ENV HOSTNAME=0.0.0.0
+ 
+ CMD ["node", "server.js"]
+diff --git a/deploy.sh b/deploy.sh
+index a94a01b..d1afeac 100755
+--- a/deploy.sh
++++ b/deploy.sh
+@@ -13,8 +13,9 @@ if ! command -v docker &> /dev/null; then
+     exit 1
+ fi
+ 
+-if ! command -v docker-compose &> /dev/null; then
+-    echo "Γ¥î Docker Compose is not installed. Please install Docker Compose first."
++# Check for Docker Compose plugin (docker compose)
++if ! docker compose version &> /dev/null; then
++    echo "Γ¥î Docker Compose plugin is not available. Please install the Docker Compose plugin or upgrade Docker (Docker Engine >= 20.10)."
+     exit 1
+ fi
+ 
+@@ -28,15 +29,15 @@ fi
+ 
+ # Stop existing containers
+ echo "≡ƒ¢æ Stopping existing containers..."
+-docker-compose down --remove-orphans
++docker compose down --remove-orphans
+ 
+ # Remove old images (optional - uncomment to force rebuild)
+ # echo "≡ƒùæ∩╕Å  Removing old images..."
+-# docker-compose down --rmi all
++# docker compose down --rmi all
+ 
+ # Build and start services
+ echo "≡ƒö¿ Building and starting services..."
+-docker-compose up --build -d
++docker compose up --build -d
+ 
+ # Wait for services to be healthy
+ echo "ΓÅ│ Waiting for services to start..."
+@@ -46,7 +47,7 @@ sleep 10
+ echo "≡ƒöì Checking service health..."
+ 
+ # Check C++ Redis server
+-if docker-compose exec -T redis-server timeout 5 bash -c '</dev/tcp/localhost/6379' 2>/dev/null; then
++if docker compose exec -T redis-server timeout 5 bash -c '</dev/tcp/localhost/6379' 2>/dev/null; then
+     echo "Γ£à C++ Redis server is healthy"
+ else
+     echo "Γ¥î C++ Redis server is not responding"
+@@ -54,7 +55,7 @@ else
+ fi
+ 
+ # Check backend server
+-if docker-compose exec -T server wget --no-verbose --tries=1 --spider http://localhost:4000/health 2>/dev/null; then
++if docker compose exec -T server wget --no-verbose --tries=1 --spider http://localhost:4000/health 2>/dev/null; then
+     echo "Γ£à Backend server is healthy"
+ else
+     echo "Γ¥î Backend server is not responding"
+@@ -77,11 +78,11 @@ echo "   ≡ƒîÉ http://gopee.dev/scuffedredis"
+ echo "   ≡ƒôí API: http://gopee.dev/api"
+ echo ""
+ echo "≡ƒôï Service Status:"
+-docker-compose ps
++docker compose ps
+ 
+ echo ""
+ echo "≡ƒô¥ View logs with:"
+-echo "   docker-compose logs -f"
++echo "   docker compose logs -f"
+ echo ""
+ echo "≡ƒ¢æ Stop services with:"
+-echo "   docker-compose down"
++echo "   docker compose down"
+diff --git a/docker-compose.yml b/docker-compose.yml
+index e013bbf..b8d40a5 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -1,5 +1,3 @@
+-version: '3.8'
+-
+ services:
+   # C++ Redis Server
+   redis-server:
+@@ -28,6 +26,9 @@ services:
+       - PORT=4000
+       - USE_SCUFFED_REDIS=true
+       - NODE_ENV=production
++      - DB_DELAY_MIN=50
++      - DB_DELAY_MAX=150
++      - LOG_WARMUP_PROGRESS=true
+     depends_on:
+       - redis-server
+     networks:
+diff --git a/package.json b/package.json
+index e747da4..ef4ed9b 100644
+--- a/package.json
++++ b/package.json
+@@ -16,10 +16,10 @@
+     "build": "npm run build:cpp && npm run build --prefix server && npm run build --prefix web",
+     "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
+     "install:all": "npm install && npm install --prefix server && npm install --prefix web",
+-    "docker:build": "docker-compose build",
+-    "docker:up": "docker-compose up -d",
+-    "docker:down": "docker-compose down",
+-    "docker:logs": "docker-compose logs -f",
++  "docker:build": "docker compose build",
++  "docker:up": "docker compose up -d",
++  "docker:down": "docker compose down",
++  "docker:logs": "docker compose logs -f",
+     "deploy": "./deploy.sh",
+     "test:integration": "node test-integration.js"
+   },
+diff --git a/server/src/cache.ts b/server/src/cache.ts
+index 78a5c34..0464be6 100644
+--- a/server/src/cache.ts
++++ b/server/src/cache.ts
+@@ -41,8 +41,14 @@ export async function setupCache() {
+         };
+       } else {
+         // Cache miss - simulate database query
+-        const dbDelay = 600 + Math.random() * 600; // 600-1200ms
++          // Adjustable artificial DB delay; defaults lowered for container responsiveness
++          const minDelay = parseInt(process.env.DB_DELAY_MIN || '50', 10);
++          const maxDelay = parseInt(process.env.DB_DELAY_MAX || '150', 10);
++          const dbDelay = minDelay + Math.random() * (maxDelay - minDelay);
+         await sleep(dbDelay);
++        if (process.env.LOG_WARMUP_PROGRESS === 'true') {
++          console.log(`[warmup] miss id=${id} delay=${Math.round(dbDelay)}ms`);
++        }
+         
+         const value = generateValue(id);
+         
+@@ -52,12 +58,16 @@ export async function setupCache() {
+         const latency = Date.now() - startTime;
+         updateStats(false);
+         
+-        return {
++        const result: CacheResult = {
+           id,
+           value,
+           hit: false,
+           latency_ms: latency
+         };
++        if (process.env.LOG_WARMUP_PROGRESS === 'true') {
++          console.log(`[warmup] stored id=${id} latency=${latency}ms`);
++        }
++        return result;
+       }
+     } catch (error) {
+       console.error(`Error getting item ${id}:`, error);
+diff --git a/server/src/index.ts b/server/src/index.ts
+index 6625500..0145a23 100644
+--- a/server/src/index.ts
++++ b/server/src/index.ts
+@@ -1,6 +1,6 @@
+-import express from 'express';
++import express, { Request, Response } from 'express';
+ import { createServer } from 'http';
+-import { Server } from 'socket.io';
++import { Server, Socket } from 'socket.io';
+ import cors from 'cors';
+ import { config } from 'dotenv';
+ import { setupRedis, getRedisType } from './redis';
+@@ -26,31 +26,48 @@ app.use(cors());
+ app.use(express.json());
+ 
+ // Health check
+-app.get('/health', (req, res) => {
++app.get('/health', (req: Request, res: Response) => {
+   res.json({ ok: true });
+ });
+ 
+-// Warm up cache with N items
+-app.post('/warmup', async (req, res) => {
+-  const count = parseInt(req.query.count as string) || 50;
+-  const { getItem } = await setupCache();
+-  
+-  const warmupPromises = [];
+-  for (let i = 0; i < count; i++) {
+-    warmupPromises.push(getItem(i + 1));
++// Cache getter captured at startup for reuse
++let getItemFn: ((id: number) => Promise<any>) | null = null;
++
++// Warm up cache with N items (fire-and-forget to avoid upstream timeouts)
++app.post('/warmup', async (req: Request, res: Response) => {
++  const count = parseInt((req.query.count as string) || '50', 10);
++
++  // Ensure we have a getter; lazily initialize if missing
++  if (!getItemFn) {
++    const { getItem } = await setupCache();
++    getItemFn = getItem;
+   }
+-  
+-  await Promise.all(warmupPromises);
+-  res.json({ warmed: count });
++
++  const startedAt = Date.now();
++  const ids = Array.from({ length: count }, (_, i) => i + 1);
++
++  // Run in background; log completion
++  (async () => {
++    try {
++      const promises = ids.map((id) => getItemFn!(id));
++      await Promise.allSettled(promises);
++      const ms = Date.now() - startedAt;
++      console.log(`Warmup completed: ${count} items in ${ms}ms`);
++    } catch (e) {
++      console.error('Warmup error:', e);
++    }
++  })();
++
++  res.status(202).json({ status: 'accepted', count });
+ });
+ 
+ // Get hit ratio stats
+-app.get('/hitratio', (req, res) => {
+-  const stats = global.cacheStats || { hits: 0, misses: 0, ratio: 0 };
++app.get('/hitratio', (req: Request, res: Response) => {
++  const stats = (global as any).cacheStats || { hits: 0, misses: 0, ratio: 0 };
+   res.json(stats);
+ });
+ 
+-io.on('connection', (socket) => {
++io.on('connection', (socket: Socket) => {
+   console.log('Client connected:', socket.id);
+   
+   socket.on('disconnect', () => {
+@@ -58,14 +75,15 @@ io.on('connection', (socket) => {
+   });
+ });
+ 
+-global.cacheStats = { hits: 0, misses: 0, ratio: 0 };
++(global as any).cacheStats = { hits: 0, misses: 0, ratio: 0 };
+ 
+ async function startServer() {
+   try {
+     await setupRedis();
+     const { getItem } = await setupCache();
++    getItemFn = getItem;
+     
+-    startTrafficGenerator(getItem, io);
++  startTrafficGenerator(getItem, io);
+     
+     server.listen(PORT, () => {
+       console.log(`Server running on port ${PORT}`);
+diff --git a/server/src/redis.ts b/server/src/redis.ts
+index 9287c73..5d3d92f 100644
+--- a/server/src/redis.ts
++++ b/server/src/redis.ts
+@@ -69,7 +69,7 @@ class ScuffedRedisClient {
+       const cmd = this.buildCommand(args);
+       this.socket!.write(cmd);
+       
+-      this.socket!.once('data', (data) => {
++      this.socket!.once('data', (data: Buffer) => {
+         const result = this.parseResponse(data);
+         resolve(result);
+       });
+@@ -104,12 +104,17 @@ class ScuffedRedisClient {
+ let scuffedRedisClient: ScuffedRedisClient | null = null;
+ 
+ export async function setupRedis(): Promise<void> {
+-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
++  // Use service name for Docker network discovery instead of localhost
++  const redisHost = process.env.REDIS_HOST || 'scuffed-redis-server';
++  const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
++  const redisUrl = process.env.REDIS_URL || `redis://${redisHost}:${redisPort}`;
+   const useScuffed = process.env.USE_SCUFFED_REDIS === 'true';
+   
+   if (useScuffed) {
+     try {
+-      scuffedRedisClient = new ScuffedRedisClient('localhost', 6379);
++  const scuffedHost = process.env.SCUFFED_REDIS_HOST || 'scuffed-redis-server';
++  const scuffedPort = parseInt(process.env.SCUFFED_REDIS_PORT || '6379', 10);
++  scuffedRedisClient = new ScuffedRedisClient(scuffedHost, scuffedPort);
+       await scuffedRedisClient.connect();
+       useScuffedRedis = true;
+       console.log('Connected to ScuffedRedis C++ server');
+@@ -120,9 +125,10 @@ export async function setupRedis(): Promise<void> {
+   }
+   
+   redis = new Redis(redisUrl, {
+-    retryDelayOnFailover: 100,
++    // Retry strategy: backoff up to 2s
++    retryStrategy: (times: number) => Math.min(100 + times * 100, 2000),
+     maxRetriesPerRequest: 3,
+-    lazyConnect: true
++    lazyConnect: true,
+   });
+ 
+   redis.on('connect', () => {
+diff --git a/web/components/Heatmap.tsx b/web/components/Heatmap.tsx
+index 48a468b..91795d6 100644
+--- a/web/components/Heatmap.tsx
++++ b/web/components/Heatmap.tsx
+@@ -27,8 +27,8 @@ export function Heatmap() {
+       states.push({
+         colorTimer: 0,
+         pulseTimer: 0,
+-        targetColor: CONFIG.COLORS.NEUTRAL,
+-        currentColor: CONFIG.COLORS.NEUTRAL,
++        targetColor: [...CONFIG.COLORS.NEUTRAL] as [number, number, number],
++        currentColor: [...CONFIG.COLORS.NEUTRAL] as [number, number, number],
+         scale: 1,
+         targetScale: 1,
+       });
+@@ -46,7 +46,7 @@ export function Heatmap() {
+     
+     if (cellState) {
+       // Set target color based on hit/miss
+-      cellState.targetColor = latestEvent.hit ? CONFIG.COLORS.HIT : CONFIG.COLORS.MISS;
++  cellState.targetColor = [...(latestEvent.hit ? CONFIG.COLORS.HIT : CONFIG.COLORS.MISS)] as [number, number, number];
+       cellState.targetScale = 1.2;
+       
+       // Reset timers
+@@ -89,10 +89,11 @@ export function Heatmap() {
+   // Animation loop
+   useFrame((state, delta) => {
+     if (!meshRef.current) return;
++    const mesh = meshRef.current;
+     
+     const deltaMs = delta * 1000;
+     
+-    cellStates.forEach((cellState, index) => {
++  cellStates.forEach((cellState: CellState, index: number) => {
+       // Update color animation
+       if (cellState.colorTimer > 0) {
+         cellState.colorTimer -= deltaMs;
+@@ -107,7 +108,7 @@ export function Heatmap() {
+         
+         // Fade back to neutral when timer expires
+         if (cellState.colorTimer <= 0) {
+-          cellState.targetColor = CONFIG.COLORS.NEUTRAL;
++          cellState.targetColor = [...CONFIG.COLORS.NEUTRAL] as [number, number, number];
+         }
+       } else {
+         // Fade to neutral
+@@ -137,13 +138,13 @@ export function Heatmap() {
+         cellState.currentColor[1],
+         cellState.currentColor[2]
+       );
+-      meshRef.current.setColorAt(index, color);
++  mesh.setColorAt(index, color);
+       
+       // Update scale (this would require updating the instance matrix)
+       // For simplicity, we'll just use color changes
+     });
+     
+-    meshRef.current.instanceColor!.needsUpdate = true;
++    mesh.instanceColor!.needsUpdate = true;
+   });
+ 
+   return (
+diff --git a/web/package.json b/web/package.json
+index 66c63cf..11935f6 100644
+--- a/web/package.json
++++ b/web/package.json
+@@ -22,14 +22,14 @@
+     "react-dom": "^18.2.0",
+     "socket.io-client": "^4.7.4",
+     "tailwind-merge": "^2.2.0",
+-    "three": "^0.155.0",
++  "three": "^0.181.0",
+     "zustand": "^4.4.7"
+   },
+   "devDependencies": {
+     "@types/node": "^20.10.5",
+     "@types/react": "^18.2.45",
+     "@types/react-dom": "^18.2.18",
+-    "@types/three": "^0.155.0",
++  "@types/three": "^0.181.0",
+     "autoprefixer": "^10.4.16",
+     "eslint": "^8.56.0",
+     "eslint-config-next": "14.0.4",

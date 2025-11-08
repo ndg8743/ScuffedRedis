@@ -41,23 +41,33 @@ export async function setupCache() {
         };
       } else {
         // Cache miss - simulate database query
-        const dbDelay = 600 + Math.random() * 600; // 600-1200ms
+        // Adjustable artificial DB delay; defaults lowered for container responsiveness
+        const minDelay = parseInt(process.env.DB_DELAY_MIN || '50', 10);
+        const maxDelay = parseInt(process.env.DB_DELAY_MAX || '150', 10);
+        const dbDelay = minDelay + Math.random() * (maxDelay - minDelay);
         await sleep(dbDelay);
-        
+        if (process.env.LOG_WARMUP_PROGRESS === 'true') {
+          console.log(`[warmup] miss id=${id} delay=${Math.round(dbDelay)}ms`);
+        }
+
         const value = generateValue(id);
-        
+
         // Store in cache with 60 second TTL
         await redisSet(key, value, 60);
-        
+
         const latency = Date.now() - startTime;
         updateStats(false);
-        
-        return {
+
+        const result: CacheResult = {
           id,
           value,
           hit: false,
           latency_ms: latency
         };
+        if (process.env.LOG_WARMUP_PROGRESS === 'true') {
+          console.log(`[warmup] stored id=${id} latency=${latency}ms`);
+        }
+        return result;
       }
     } catch (error) {
       console.error(`Error getting item ${id}:`, error);

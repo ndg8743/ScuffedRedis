@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:build-your-own.org)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
