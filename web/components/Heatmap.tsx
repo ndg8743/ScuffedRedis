@@ -21,8 +21,7 @@ interface CellState {
 
 export function Heatmap() {
   const meshRef = useRef<InstancedMesh>(null);
-  const { events, operationsPerSecond } = useAppStore();
-  const [hoveredCell, setHoveredCell] = useState<{ index: number; info: string } | null>(null);
+  const { events } = useAppStore();
 
   // Initialize cell states
   const cellStates = useMemo(() => {
