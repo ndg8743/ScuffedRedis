@@ -19,12 +19,12 @@
     "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
     "start:workshop": "npm run start --prefix server & npm run start --prefix web",
     "install:all": "npm install && npm install --prefix server && npm install --prefix web",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "deploy": "./deploy.sh",
-    "test:integration": "node test-integration.js"
+    "docker:build": "docker-compose -f docker/docker-compose.yml build",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down",
+    "docker:logs": "docker-compose -f docker/docker-compose.yml logs -f",
+    "deploy": "./scripts/deploy.sh",
+    "test:integration": "node tests/test-integration.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
