@@ -4,8 +4,8 @@ services:
   # C++ Redis Server
   redis-server:
     build:
-      context: .
-      dockerfile: Dockerfile.cpp
+      context: ..
+      dockerfile: docker/Dockerfile.cpp
     container_name: scuffed-redis-server
     ports:
       - "6379:6379"
@@ -21,8 +21,8 @@ services:
   # Node.js Backend Server
   server:
     build:
-      context: .
-      dockerfile: Dockerfile.server
+      context: ..
+      dockerfile: docker/Dockerfile.server
     container_name: redis-backend
     environment:
       - PORT=4000
@@ -42,8 +42,8 @@ services:
   # React Frontend
   web:
     build:
-      context: .
-      dockerfile: Dockerfile.web
+      context: ..
+      dockerfile: docker/Dockerfile.web
     container_name: redis-frontend
     environment:
       - NEXT_PUBLIC_SERVER_URL=http://gopee.dev/api
