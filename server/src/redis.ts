@@ -3,6 +3,10 @@ import net from 'net';
 
 let redis: Redis | null = null;
 let useScuffedRedis = false;
+let useMockMode = false;
+
+// Simple in-memory cache for mock mode
+const mockCache = new Map<string, { value: string; expires: number }>();
 
 class ScuffedRedisClient {
   private socket: net.Socket | null = null;
@@ -134,40 +138,49 @@ class ScuffedRedisClient {
 let scuffedRedisClient: ScuffedRedisClient | null = null;
 
 export async function setupRedis(): Promise<void> {
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6380';
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
   const useScuffed = process.env.USE_SCUFFED_REDIS === 'true';
-  const scuffedPort = parseInt(process.env.SCUFFED_REDIS_PORT || '6380');
+  const scuffedPort = parseInt(process.env.SCUFFED_REDIS_PORT || '6379');
 
+  // Try ScuffedRedis first if configured
   if (useScuffed) {
     try {
       scuffedRedisClient = new ScuffedRedisClient('localhost', scuffedPort);
       await scuffedRedisClient.connect();
       useScuffedRedis = true;
-      console.log(`Connected to ScuffedRedis C++ server on port ${scuffedPort}`);
+      useMockMode = false;
+      console.log(`✅ Connected to ScuffedRedis C++ server on port ${scuffedPort}`);
       return;
     } catch (error) {
-      console.log('ScuffedRedis not available, falling back to Redis');
+      console.log('📡 ScuffedRedis not available, trying standard Redis...');
     }
   }
-  
-  redis = new Redis(redisUrl, {
-    retryStrategy: (times) => {
-      return 100;
-    },
-    maxRetriesPerRequest: 3,
-    lazyConnect: true
-  });
 
-  redis.on('connect', () => {
-    console.log('Connected to Redis');
-  });
+  // Try standard Redis
+  try {
+    redis = new Redis(redisUrl, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+      connectTimeout: 1000,
+      retryStrategy: () => null
+    });
 
-  redis.on('error', (err) => {
-    console.error('Redis connection error:', err);
-  });
+    redis.on('error', () => {});
 
-  await redis.connect();
+    await redis.connect();
+    console.log('✅ Connected to Redis');
+    useScuffedRedis = false;
+    useMockMode = false;
+    return;
+  } catch (error) {
+    console.log('⚠️ Standard Redis not available');
+  }
+
+  // Fallback to mock mode
+  console.log('⚠️ No Redis available - running in mock mode (in-memory cache)');
+  redis = null;
   useScuffedRedis = false;
+  useMockMode = true;
 }
 
 export async function redisGet(key: string): Promise<string | null> {
@@ -176,7 +189,13 @@ export async function redisGet(key: string): Promise<string | null> {
   } else if (redis) {
     return await redis.get(key);
   }
-  throw new Error('No Redis client available');
+  // Mock mode
+  const entry = mockCache.get(key);
+  if (entry && entry.expires > Date.now()) {
+    return entry.value;
+  }
+  mockCache.delete(key);
+  return null;
 }
 
 export async function redisSet(key: string, value: string, ttl?: number): Promise<void> {
@@ -189,7 +208,9 @@ export async function redisSet(key: string, value: string, ttl?: number): Promis
       await redis.set(key, value);
     }
   } else {
-    throw new Error('No Redis client available');
+    // Mock mode
+    const expires = ttl ? Date.now() + (ttl * 1000) : Date.now() + 3600000;
+    mockCache.set(key, { value, expires });
   }
 }
 
@@ -199,7 +220,7 @@ export async function redisPing(): Promise<string> {
   } else if (redis) {
     return await redis.ping();
   }
-  throw new Error('No Redis client available');
+  return 'PONG';
 }
 
 export async function redisDel(key: string): Promise<number> {
@@ -208,7 +229,7 @@ export async function redisDel(key: string): Promise<number> {
   } else if (redis) {
     return await redis.del(key);
   }
-  throw new Error('No Redis client available');
+  return mockCache.delete(key) ? 1 : 0;
 }
 
 export async function redisExists(key: string): Promise<number> {
@@ -217,7 +238,8 @@ export async function redisExists(key: string): Promise<number> {
   } else if (redis) {
     return await redis.exists(key);
   }
-  throw new Error('No Redis client available');
+  const entry = mockCache.get(key);
+  return entry && entry.expires > Date.now() ? 1 : 0;
 }
 
 export async function redisKeys(pattern: string): Promise<string[]> {
@@ -226,7 +248,11 @@ export async function redisKeys(pattern: string): Promise<string[]> {
   } else if (redis) {
     return await redis.keys(pattern);
   }
-  throw new Error('No Redis client available');
+  // Mock mode - filter by pattern
+  const allKeys = Array.from(mockCache.keys());
+  if (pattern === '*') return allKeys;
+  const regex = new RegExp('^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+  return allKeys.filter(key => regex.test(key));
 }
 
 export async function redisFlushdb(): Promise<void> {
@@ -235,7 +261,7 @@ export async function redisFlushdb(): Promise<void> {
   } else if (redis) {
     await redis.flushdb();
   } else {
-    throw new Error('No Redis client available');
+    mockCache.clear();
   }
 }
 
@@ -243,10 +269,9 @@ export async function redisInfo(): Promise<string> {
   if (useScuffedRedis && scuffedRedisClient) {
     return await scuffedRedisClient.info();
   } else if (redis) {
-    const info = await redis.info();
-    return info;
+    return await redis.info();
   }
-  throw new Error('No Redis client available');
+  return 'mock_mode:true\r\nkeys:' + mockCache.size;
 }
 
 export async function redisDbsize(): Promise<number> {
@@ -255,11 +280,13 @@ export async function redisDbsize(): Promise<number> {
   } else if (redis) {
     return await redis.dbsize();
   }
-  throw new Error('No Redis client available');
+  return mockCache.size;
 }
 
 export function getRedisType(): string {
-  return useScuffedRedis ? 'ScuffedRedis C++ (Full Implementation)' : 'Standard Redis';
+  if (useScuffedRedis) return 'ScuffedRedis C++ (Full Implementation)';
+  if (redis) return 'Standard Redis';
+  return 'In-Memory (Mock)';
 }
 
 export async function closeRedis(): Promise<void> {
