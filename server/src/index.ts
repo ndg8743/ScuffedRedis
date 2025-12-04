@@ -62,6 +62,51 @@ app.get('/hitratio', (req, res) => {
   res.json(stats);
 });
 
+// Metrics endpoint for WorkshopControlPanel
+app.get('/metrics', async (req, res) => {
+  const stats = global.cacheStats || { hits: 0, misses: 0, ratio: 0 };
+  const dbsize = await redisDbsize();
+  res.json({
+    ...stats,
+    keys: dbsize,
+    redisType: getRedisType(),
+    uptime: process.uptime()
+  });
+});
+
+// Traffic pattern endpoint for WorkshopControlPanel
+app.post('/traffic/pattern', (req, res) => {
+  const { pattern } = req.body;
+  if (pattern) {
+    setTrafficConfig({ pattern });
+    res.json({ status: 'updated', pattern });
+  } else {
+    res.status(400).json({ error: 'No pattern provided' });
+  }
+});
+
+// Traffic rate endpoint
+app.post('/traffic/rate', (req, res) => {
+  const { rate } = req.body;
+  if (rate !== undefined) {
+    setTrafficConfig({ rate });
+    res.json({ status: 'updated', rate });
+  } else {
+    res.status(400).json({ error: 'No rate provided' });
+  }
+});
+
+// Traffic operation type endpoint
+app.post('/traffic/operation', (req, res) => {
+  const { operationType } = req.body;
+  if (operationType) {
+    setTrafficConfig({ operationType });
+    res.json({ status: 'updated', operationType });
+  } else {
+    res.status(400).json({ error: 'No operationType provided' });
+  }
+});
+
 // Execute Redis command
 app.post('/execute', async (req, res) => {
   const { command } = req.body;
