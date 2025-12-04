@@ -41,8 +41,3 @@ export const CONFIG = {
     OTHER: 'smooth'    // Smooth pulse
   }
 } as const;
-
-
-
-
-

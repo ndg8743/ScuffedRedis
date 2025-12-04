@@ -41,7 +41,7 @@ export async function setupCache() {
         };
       } else {
         // Cache miss - simulate database query
-        const dbDelay = 600 + Math.random() * 600; // 600-1200ms
+        const dbDelay = 100 + Math.random() * 200; // 100-300ms (reduced for better performance)
         await sleep(dbDelay);
         
         const value = generateValue(id);

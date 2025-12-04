@@ -69,8 +69,3 @@ export function Legend() {
     </Card>
   );
 }
-
-
-
-
-

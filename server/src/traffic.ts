@@ -130,8 +130,3 @@ export function stopTrafficGenerator() {
     console.log('Traffic generator stopped');
   }
 }
-
-
-
-
-
