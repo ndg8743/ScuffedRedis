@@ -2,6 +2,13 @@
 
 A Redis implementation in C++ with a 3D real-time cache visualization system. Built following the [Build Your Own Redis](https://build-your-own.org/redis/) tutorial by James Smith.
 
+## ScuffedRedis
+<div align="center">
+
+![ScuffedRedis](./ScuffedRedis.gif)
+</div>
+
+> ScuffedRedis, Redis but if it was bad
 ## Overview
 
 This project demonstrates cache warm-up patterns through a 3D voxel wall where:

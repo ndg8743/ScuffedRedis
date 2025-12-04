@@ -1,3 +1,9 @@
+# Claude Code
+.claude/
+
+# Windows null file
+nul
+
 # Build artifacts
 build/
 *.o
