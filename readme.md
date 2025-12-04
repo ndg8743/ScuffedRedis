@@ -1,31 +1,40 @@
-# ScuffedRedis
+# Redis Cache Heatmap
 
-A Redis implementation built from scratch in C++ with 3D cache visualization.
+A Redis implementation in C++ with a 3D real-time cache visualization system. Built following the [Build Your Own Redis](https://build-your-own.org/redis/) tutorial by James Smith.
 
-## What is this?
+## Overview
 
-ScuffedRedis is a complete Redis-compatible server written in C++ that implements:
-- Core Redis commands (GET, SET, DEL, EXISTS, KEYS, PING, ECHO, INFO)
-- Sorted sets (ZADD, ZRANGE, ZRANK, ZREM, ZSCORE, ZCARD)
-- TTL support with automatic expiration
-- Custom binary protocol for client-server communication
-- Thread-safe hash table with dynamic resizing
-- Real-time 3D visualization of cache hits and misses
+This project demonstrates cache warm-up patterns through a 3D voxel wall where:
+- **Red cubes** = Cache misses (slow database queries)
+- **Green cubes** = Cache hits (fast Redis lookups)
+- **Gray cubes** = Idle state
 
 ## Architecture
 
-### C++ Server
-- **Port**: 6379 (configurable)
-- **Protocol**: Custom binary format for efficiency
-- **Data Structures**: Hash table, AVL tree, TTL manager
-- **Networking**: TCP server with select/poll event loop
-- **Thread Safety**: Concurrent operations with proper locking
+The system consists of three main components:
 
-### Visualization Stack
-- **Backend**: Node.js + Express + Socket.IO (port 4000)
-- **Frontend**: Next.js + React Three Fiber (port 3000)
-- **Real-time**: WebSocket communication for live updates
-- **3D Engine**: 400-voxel wall showing cache activity
+1. **C++ Redis Server** - Custom Redis implementation using binary protocol on port 6379
+2. **Node.js Middleware** - Bridges between C++ server and frontend via WebSocket
+3. **React Frontend** - 3D visualization using Three.js
+
+### Components
+
+**Frontend:**
+- Next.js 14 with App Router
+- React Three Fiber for 3D rendering
+- TailwindCSS + shadcn/ui for styling
+- Socket.IO for real-time updates
+
+**Backend:**
+- Node.js + Express middleware server
+- Custom binary protocol client for C++ Redis server
+- Socket.IO for WebSocket communication
+
+**C++ Server:**
+- Custom Redis implementation
+- Binary protocol compatible with Redis RESP
+- Hash table and sorted set data structures
+- TTL support for cache expiration
 
 ## Quick Start
 
@@ -33,120 +42,155 @@ ScuffedRedis is a complete Redis-compatible server written in C++ that implement
 - CMake 3.10+
 - C++17 compiler
 - Node.js 18+
-- Docker (optional)
+- npm or pnpm
 
 ### Build and Run
 ```bash
-# Build C++ server
-cmake -B build -S .
-cmake --build build --config Release
+npm run install:all
+```
 
-# Start ScuffedRedis server
-./build/Release/scuffed-redis-server
-
-# In another terminal, start visualization
-npm install
+### 2. Build and Start All Services
+```bash
 npm run dev
 ```
 
-### Using Docker Compose
-```bash
-docker-compose up --build
+This starts:
+- C++ Redis server on port 6379
+- Node.js middleware on port 4000
+- React frontend on port 3000
+
+### 3. Open the Application
+Navigate to `http://localhost:3000`
+
+## Dependencies
+
+This project uses the following main dependencies:
+
+- **React:** 18.2.0
+- **Next.js:** 14.2.33
+- **Three.js:** 0.159.0
+- **ioredis:** 5.3.2
+
+**Note on `three-mesh-bvh`:**
+
+There is a known issue with `three-mesh-bvh` where it may try to import `BatchedMesh` from `three`, which is not available in all versions. This can cause build errors. To resolve this, make sure you are using compatible versions of `three`, `@react-three/drei`, and `@react-three/fiber`.
+
+## How It Works
+
+### Cache-Aside Pattern
+The backend implements a cache-aside pattern:
+1. **Cache Hit**: Data retrieved from Redis (fast, green flash)
+2. **Cache Miss**: Simulated database query (100-300ms delay, red flash)
+3. **TTL**: Cached items expire after 60 seconds
+
+### Traffic Generation
+- Zipf distribution for realistic access patterns
+- 200 unique items with skewed popularity
+- 300-500ms intervals between requests
+
+### 3D Visualization
+- 20×20 voxel wall (400 cubes total)
+- Deterministic mapping: `cellIndex = hash(id) % 400`
+- Real-time updates via WebSocket
+
+## Features
+
+- Live cache hit/miss visualization
+- Interactive warm-up controls
+- Real-time hit ratio statistics
+- Optimized 3D rendering with InstancedMesh
+
+## Configuration
+
+### Environment Variables
+
+**Backend** (`server/.env`):
+```env
+PORT=4000
+# Set to true to use the custom C++ Redis server, or false to use a standard Redis instance
+USE_SCUFFED_REDIS=true
 ```
 
-## Testing
-
-### CLI Client
-```bash
-# Connect to server
-./build/Release/scuffed-redis-cli
-
-# Test commands
-> SET hello world
-> GET hello
-> KEYS *
-> INFO
+**Frontend** (`web/.env.local`):
+```env
+NEXT_PUBLIC_SERVER_URL=http://localhost:4000
 ```
-
-### Visualization
-Open http://localhost:3000 to see the 3D cache heatmap.
-
-## Redis Commands Supported
-
-### Basic Operations
-- `GET key` - Retrieve value
-- `SET key value [EX seconds]` - Store with optional TTL
-- `DEL key [key ...]` - Delete keys
-- `EXISTS key [key ...]` - Check existence
-- `KEYS pattern` - Find keys by pattern
-
-### Server Operations
-- `PING [message]` - Test connectivity
-- `ECHO message` - Echo message back
-- `INFO` - Server statistics
-- `FLUSHDB` - Clear all data
-- `DBSIZE` - Count keys
-
-### Sorted Sets
-- `ZADD key score member` - Add to sorted set
-- `ZRANGE key start stop` - Get range by rank
-- `ZRANK key member` - Get member rank
-- `ZREM key member` - Remove member
-- `ZSCORE key member` - Get member score
-- `ZCARD key` - Get set size
-
-## Implementation Details
-
-### Data Structures
-- **Hash Table**: Separate chaining with MurmurHash3
-- **AVL Tree**: Self-balancing for sorted sets
-- **TTL Manager**: Min-heap for efficient expiration
-
-### Protocol
-Binary format: `[Type:1][Length:4][Data:N]`
-- Type codes: String(1), Error(2), Integer(3), BulkString(4), Array(5), Null(6)
-- Little-endian encoding for multi-byte fields
-- Zero-copy operations where possible
-
-### Performance
-- O(1) hash table operations (average case)
-- O(log n) sorted set operations
-- Sub-millisecond response times
-- Handles 1000+ concurrent connections
 
 ## Project Structure
 
 ```
-src/
-├── server/          # Main server and command handling
-├── client/          # CLI client implementation  
-├── network/         # TCP sockets and connection management
-├── protocol/        # Binary protocol serialization
-├── data/            # Hash table, AVL tree, TTL manager
-├── event/           # Event loop for async I/O
-└── utils/           # Logging utilities
-
-server/              # Node.js visualization backend
-web/                 # React frontend with 3D visualization
-tests/               # Unit and integration tests
+├── src/                   # C++ Redis server
+│   ├── server/           # Main server implementation
+│   ├── protocol/         # Binary protocol handling
+│   ├── data/             # Data structures (hashtable, sorted set)
+│   ├── network/          # TCP server and client
+│   └── utils/            # Logging utilities
+├── server/               # Node.js middleware
+│   ├── src/
+│   │   ├── index.ts     # Express + Socket.IO server
+│   │   ├── cache.ts     # Cache-aside implementation
+│   │   ├── redis.ts     # Binary protocol client
+│   │   └── traffic.ts   # Traffic generator
+│   └── package.json
+├── web/                 # React frontend
+│   ├── components/      # UI components and 3D scene
+│   ├── lib/            # Configuration and utilities
+│   └── package.json
+└── CMakeLists.txt      # C++ build configuration
 ```
 
-## Development Notes
+## Binary Protocol
 
-### Building
-The project uses CMake for C++ compilation and npm for the Node.js components. The C++ server can run independently or with the visualization stack.
+The C++ server implements a custom binary protocol:
 
-### Protocol Compatibility
-ScuffedRedis uses a custom binary protocol rather than Redis RESP. This was designed for educational purposes to understand protocol design. The visualization uses a compatibility layer to communicate with the C++ server.
+```
+Format: [Type:1 byte][Length:4 bytes LE][Data:N bytes]
+Types: 0x01=SimpleString, 0x02=Error, 0x03=Integer,
+       0x04=BulkString, 0x05=Array, 0x06=Null
+```
 
-### Deployment
-For production deployment at gopee.dev/scuffedredis:
-1. Build optimized binaries with CMAKE_BUILD_TYPE=Release
-2. Configure reverse proxy for port 3000 frontend
-3. Set up process management (systemd/PM2)
-4. Configure firewall for ports 6379 (Redis) and 4000 (API)
-5. Use Docker for consistent deployment environment
+## Development
+
+### Building the C++ Server
+```bash
+npm run build:cpp
+```
+
+### Running Individual Components
+```bash
+# C++ server only
+npm run dev:cpp
+
+# Node.js middleware only
+npm run dev:server
+
+# React frontend only
+npm run dev:web
+```
+
+## Troubleshooting
+
+### Connection Issues
+Check if the C++ server is running:
+```bash
+# Test connection
+telnet localhost 6379
+```
+
+### Build Issues
+```bash
+# Clean and rebuild
+rm -rf build/
+npm run build:cpp
+```
+
+## References
+
+This project is inspired by and follows concepts from:
+- [Build Your Own Redis](https://build-your-own.org/redis/) by James Smith
+- Redis Protocol Specification (RESP)
+- Modern C++ network programming patterns
 
 ## License
 
-MIT License - Educational project for learning Redis internals.
+MIT License - see LICENSE file for details.

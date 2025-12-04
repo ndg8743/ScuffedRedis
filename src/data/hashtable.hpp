@@ -1,13 +1,7 @@
 #ifndef SCUFFEDREDIS_HASHTABLE_HPP
 #define SCUFFEDREDIS_HASHTABLE_HPP
 
-/**
- * Hash table implementation for ScuffedRedis.
- * 
- * Uses separate chaining for collision resolution.
- * Supports dynamic resizing when load factor exceeds threshold.
- * Thread-safe version will be added later.
- */
+// Hash table with separate chaining and dynamic resizing
 
 #include <vector>
 #include <string>
@@ -18,15 +12,7 @@
 
 namespace scuffedredis {
 
-/**
- * Hash table with string keys and values.
- * 
- * Features:
- * - Separate chaining with linked lists
- * - Dynamic resizing at 75% load factor
- * - MurmurHash3 for better distribution
- * - Cache-friendly memory layout
- */
+// Hash table with string keys and values
 class HashTable {
 public:
     // Node for separate chaining
@@ -74,59 +60,17 @@ public:
     HashTable(HashTable&& other) noexcept;
     HashTable& operator=(HashTable&& other) noexcept;
     
-    /**
-     * Insert or update a key-value pair.
-     * Returns true if key was newly inserted, false if updated.
-     */
     bool set(const std::string& key, const std::string& value);
-    
-    /**
-     * Get value for a key.
-     * Returns nullopt if key doesn't exist.
-     */
     std::optional<std::string> get(const std::string& key) const;
-    
-    /**
-     * Delete a key-value pair.
-     * Returns true if key existed and was deleted.
-     */
     bool del(const std::string& key);
-    
-    /**
-     * Check if key exists.
-     */
     bool exists(const std::string& key) const;
-    
-    /**
-     * Get all keys matching a pattern.
-     * Pattern supports * wildcard (e.g., "user:*").
-     * Simple implementation for now.
-     */
     std::vector<std::string> keys(const std::string& pattern = "*") const;
-    
-    /**
-     * Clear all entries.
-     */
     void clear();
     
-    /**
-     * Get number of entries.
-     */
     size_t size() const { return size_; }
-    
-    /**
-     * Check if empty.
-     */
     bool empty() const { return size_ == 0; }
-    
-    /**
-     * Get current capacity (number of buckets).
-     */
     size_t capacity() const { return buckets_.size(); }
     
-    /**
-     * Get load factor (size / capacity).
-     */
     double load_factor() const {
         return buckets_.empty() ? 0.0 : 
                static_cast<double>(size_) / buckets_.size();
@@ -183,10 +127,7 @@ private:
                         const std::string& pattern) const;
 };
 
-/**
- * Thread-safe wrapper for HashTable.
- * Uses read-write lock for better concurrency.
- */
+// Thread-safe wrapper for HashTable
 class ConcurrentHashTable {
 public:
     explicit ConcurrentHashTable(size_t initial_capacity = 16);

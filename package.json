@@ -8,12 +8,23 @@
     "web"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix web\"",
-    "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
-    "build": "npm run build --prefix server && npm run build --prefix web",
-    "install:all": "npm install && npm install --prefix server && npm install --prefix web",
+    "dev": "concurrently \"npm run dev:cpp\" \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:cpp": "cd . && mkdir -p build && cd build && cmake .. && make && ./scuffed-redis-server",
     "dev:server": "npm run dev --prefix server",
-    "dev:web": "npm run dev --prefix web"
+    "dev:web": "npm run dev --prefix web",
+    "workshop": "concurrently \"npm run dev:cpp\" \"npm run dev:server\" \"npm run dev:web\" --names 'Redis,Server,Web' --prefix name --prefix-colors blue,yellow,green",
+    "workshop:demo": "concurrently \"npm run dev:server\" \"npm run dev:web\" --names 'Server,Web' --prefix name --prefix-colors yellow,green",
+    "build:cpp": "mkdir -p build && cd build && cmake .. && make",
+    "build": "npm run build:cpp && npm run build --prefix server && npm run build --prefix web",
+    "start": "concurrently \"npm run start --prefix server\" \"npm run start --prefix web\"",
+    "start:workshop": "npm run start --prefix server & npm run start --prefix web",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix web",
+    "docker:build": "docker-compose -f docker/docker-compose.yml build",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down",
+    "docker:logs": "docker-compose -f docker/docker-compose.yml logs -f",
+    "deploy": "./scripts/deploy.sh",
+    "test:integration": "node tests/test-integration.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

@@ -32,7 +32,25 @@ class SocketManager {
     });
 
     this.socket.on('cache_event', (data) => {
-      useAppStore.getState().addEvent(data);
+      useAppStore.getState().addEvent({
+        id: data.id,
+        hit: data.hit,
+        latency_ms: data.latency_ms,
+        command: data.operationType || 'OTHER'
+      });
+    });
+
+    this.socket.on('stats_reset', (stats) => {
+      useAppStore.getState().updateHitRatio(stats);
+      console.log('Statistics reset:', stats);
+    });
+
+    this.socket.on('state_loaded', (data) => {
+      console.log('Workshop state loaded:', data.scenarioName);
+    });
+
+    this.socket.on('initial_stats', (stats) => {
+      useAppStore.getState().updateHitRatio(stats);
     });
 
     return this.socket;

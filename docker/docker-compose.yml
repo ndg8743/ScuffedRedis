@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # C++ Redis Server
+  redis-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cpp
+    container_name: scuffed-redis-server
+    ports:
+      - "6379:6379"
+    networks:
+      - redis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/6379'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Node.js Backend Server
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.server
+    container_name: redis-backend
+    environment:
+      - PORT=4000
+      - USE_SCUFFED_REDIS=true
+      - NODE_ENV=production
+    depends_on:
+      - redis-server
+    networks:
+      - redis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # React Frontend
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    container_name: redis-frontend
+    environment:
+      - NEXT_PUBLIC_SERVER_URL=http://gopee.dev/api
+      - NODE_ENV=production
+    depends_on:
+      - server
+    networks:
+      - redis-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: redis-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+      - server
+    networks:
+      - redis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  redis-network:
+    driver: bridge
+
+volumes:
+  ssl_data:

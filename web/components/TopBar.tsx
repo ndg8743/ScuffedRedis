@@ -5,9 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/lib/state';
 import { SERVER_URL } from '@/lib/config';
+import { Terminal, Zap, BookOpen, Play, Settings } from 'lucide-react';
 
-export function TopBar() {
-  const { hitRatio, isConnected } = useAppStore();
+interface TopBarProps {
+  onOpenCommandPlayground: () => void;
+  onOpenEducational?: () => void;
+  onOpenWorkshop?: () => void;
+  onOpenControl?: () => void;
+}
+
+export function TopBar({
+  onOpenCommandPlayground,
+  onOpenEducational,
+  onOpenWorkshop,
+  onOpenControl
+}: TopBarProps) {
+  const { hitRatio, isConnected, operationsPerSecond } = useAppStore();
   const [isWarmingUp, setIsWarmingUp] = useState(false);
 
   const handleWarmUp = async () => {
@@ -52,13 +65,65 @@ export function TopBar() {
             {getHitRatioText()}
           </Badge>
         </div>
-        
-        <Button 
-          onClick={handleWarmUp} 
+
+        <div className="flex items-center space-x-2">
+          <Zap className="w-4 h-4 text-yellow-500 animate-pulse" />
+          <span className="text-sm font-medium">{operationsPerSecond.toFixed(1)} ops/sec</span>
+        </div>
+
+        <Button
+          onClick={onOpenCommandPlayground}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <Terminal className="w-4 h-4" />
+          Command
+        </Button>
+
+        {onOpenEducational && (
+          <Button
+            onClick={onOpenEducational}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <BookOpen className="w-4 h-4" />
+            Learn
+          </Button>
+        )}
+
+        {onOpenWorkshop && (
+          <Button
+            onClick={onOpenWorkshop}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Play className="w-4 h-4" />
+            Scenarios
+          </Button>
+        )}
+
+        {onOpenControl && (
+          <Button
+            onClick={onOpenControl}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Control
+          </Button>
+        )}
+
+        <Button
+          onClick={handleWarmUp}
           disabled={isWarmingUp}
           variant="outline"
+          size="sm"
         >
-          {isWarmingUp ? 'Warming Up...' : 'Warm Up'}
+          {isWarmingUp ? 'Warming...' : 'Warm Up'}
         </Button>
       </div>
     </div>

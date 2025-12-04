@@ -14,6 +14,7 @@
 #include <mutex>
 #include <atomic>
 #include <functional>
+#include <thread>
 
 namespace scuffedredis {
 

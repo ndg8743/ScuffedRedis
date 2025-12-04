@@ -3,9 +3,21 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { config } from 'dotenv';
-import { setupRedis, getRedisType } from './redis';
+import {
+  setupRedis,
+  getRedisType,
+  redisGet,
+  redisSet,
+  redisDel,
+  redisExists,
+  redisKeys,
+  redisFlushdb,
+  redisInfo,
+  redisDbsize,
+  redisPing
+} from './redis';
 import { setupCache } from './cache';
-import { startTrafficGenerator } from './traffic';
+import { startTrafficGenerator, stopTrafficGenerator, setTrafficConfig } from './traffic';
 
 // Load environment variables
 config({ path: './env' });
@@ -50,33 +62,220 @@ app.get('/hitratio', (req, res) => {
   res.json(stats);
 });
 
-// Socket.IO connection handling
+// Execute Redis command
+app.post('/execute', async (req, res) => {
+  const { command } = req.body;
+
+  if (!command) {
+    return res.status(400).json({ error: 'No command provided' });
+  }
+
+  try {
+    // Parse the command
+    const parts = command.trim().split(/\s+/);
+    const cmd = parts[0].toUpperCase();
+    const args = parts.slice(1);
+
+    let result;
+
+    switch (cmd) {
+      case 'PING':
+        result = await redisPing();
+        break;
+
+      case 'GET':
+        if (args.length !== 1) {
+          throw new Error('GET requires exactly 1 argument');
+        }
+        result = await redisGet(args[0]);
+        break;
+
+      case 'SET':
+        if (args.length < 2) {
+          throw new Error('SET requires at least 2 arguments');
+        }
+        // Handle optional EX (expiry) parameter
+        let ttl;
+        if (args[2] === 'EX' && args[3]) {
+          ttl = parseInt(args[3]);
+        }
+        await redisSet(args[0], args.slice(1, args[2] === 'EX' ? 2 : undefined).join(' '), ttl);
+        result = 'OK';
+        break;
+
+      case 'DEL':
+        if (args.length < 1) {
+          throw new Error('DEL requires at least 1 argument');
+        }
+        // For simplicity, handle single key deletion
+        result = await redisDel(args[0]);
+        break;
+
+      case 'EXISTS':
+        if (args.length !== 1) {
+          throw new Error('EXISTS requires exactly 1 argument');
+        }
+        result = await redisExists(args[0]);
+        break;
+
+      case 'KEYS':
+        if (args.length !== 1) {
+          throw new Error('KEYS requires exactly 1 argument');
+        }
+        result = await redisKeys(args[0]);
+        break;
+
+      case 'FLUSHDB':
+        await redisFlushdb();
+        result = 'OK';
+        break;
+
+      case 'INFO':
+        result = await redisInfo();
+        break;
+
+      case 'DBSIZE':
+        result = await redisDbsize();
+        break;
+
+      case 'ZADD':
+        // TODO: Implement sorted set commands
+        throw new Error('Sorted set commands not yet implemented in web interface');
+
+      default:
+        throw new Error(`Unknown command: ${cmd}`);
+    }
+
+    res.json({ result, command });
+  } catch (error) {
+    res.json({
+      error: (error as Error).message,
+      command
+    });
+  }
+});
+
+// Workshop traffic control endpoints
+app.post('/workshop/traffic', async (req, res) => {
+  const { action, config } = req.body;
+
+  try {
+    switch (action) {
+      case 'start':
+        setTrafficConfig(config || { rate: 10, pattern: 'constant', operationType: 'mixed' });
+        startTrafficGenerator((global as any).getItem, io);
+        res.json({ status: 'started', config });
+        break;
+
+      case 'pause':
+        stopTrafficGenerator();
+        res.json({ status: 'paused' });
+        break;
+
+      case 'stop':
+        stopTrafficGenerator();
+        await redisFlushdb();
+        res.json({ status: 'stopped' });
+        break;
+
+      default:
+        res.status(400).json({ error: 'Unknown action' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Workshop statistics reset
+app.post('/workshop/reset-stats', async (req, res) => {
+  try {
+    global.cacheStats = { hits: 0, misses: 0, ratio: 0 };
+    io.emit('stats_reset', { hits: 0, misses: 0, ratio: 0 });
+    res.json({ status: 'reset' });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Workshop state save
+app.post('/workshop/save-state', async (req, res) => {
+  const { trafficConfig, hitRatio, commandStats, scenarioName } = req.body;
+
+  try {
+    const state = {
+      timestamp: Date.now(),
+      trafficConfig,
+      hitRatio,
+      commandStats,
+      scenarioName,
+      cacheInfo: await redisInfo()
+    };
+
+    // Store in memory
+    (global as any).workshopStates = (global as any).workshopStates || [];
+    (global as any).workshopStates.push(state);
+
+    res.json({ status: 'saved', state });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Workshop state load
+app.post('/workshop/load-state', async (req, res) => {
+  const { trafficConfig, scenarioName } = req.body;
+
+  try {
+    // Stop current traffic
+    stopTrafficGenerator();
+
+    // Reset stats
+    global.cacheStats = { hits: 0, misses: 0, ratio: 0 };
+
+    // Apply traffic config
+    if (trafficConfig) {
+      setTrafficConfig(trafficConfig);
+      startTrafficGenerator((global as any).getItem, io);
+    }
+
+    io.emit('state_loaded', { scenarioName });
+    res.json({ status: 'loaded', scenarioName });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Get workshop states
+app.get('/workshop/states', (req, res) => {
+  const states = (global as any).workshopStates || [];
+  res.json({ states });
+});
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  
+
+  // Send initial stats on connection
+  socket.emit('initial_stats', global.cacheStats);
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
 
-// Global stats for hit ratio
 global.cacheStats = { hits: 0, misses: 0, ratio: 0 };
 
-// Initialize Redis and start server
 async function startServer() {
   try {
     await setupRedis();
     const { getItem } = await setupCache();
     
-    // Start traffic generator
     startTrafficGenerator(getItem, io);
     
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Redis Cache Heatmap backend ready`);
-      console.log(`🔗 Connected to: ${getRedisType()}`);
-      console.log(`🌐 Frontend: http://localhost:3000`);
-      console.log(`📡 Backend API: http://localhost:${PORT}`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Connected to: ${getRedisType()}`);
+      console.log(`Frontend: http://localhost:3000`);
+      console.log(`Backend API: http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
